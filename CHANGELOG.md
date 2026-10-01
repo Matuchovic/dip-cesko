@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.0 – 2026-10-01
+- Reálný čas: polohy se obnovují každé 3 s (v ulicích jen pro výřez mapy, server drží data 3 s); mezi měřeními vozidlo jede po trati naměřenou rychlostí až k další zastávce (nejvýše 45 s), nové měření se napojí plynule a vozidlo nikdy necouvá kvůli zpoždění dat; dopočtená poloha je v detailu označená.
+- Skutečná velikost 3D vozidel při každém přiblížení (dříve se při oddálení zvětšovala).
+- Tramvaj blíž ilustraci: červený klín na boku kabiny, prostorový pantograf.
+- Metro: Golemio posílá i polohy souprav metra – po zrušení limitu 100 vozidel se zobrazují a přichytávají na koleje metra; v Stavu dat je počet vozidel podle druhu.
+- Odjezdy se obnovují každých 10 s.
+
+## 0.4.0 – 2026-10-01
+- Reálný čas: obnova poloh každé 3 s (jen výřez mapy, po posunu hned), serverová cache 3 s; vozidlo se po měření plynule dorovná a jede dál po trati odhadnutou rychlostí (nejvýše 20 s za posledním měřením), nikdy necouvá.
+- Vozidla mají při každém přiblížení skutečnou velikost (dříve se při oddálení zvětšovala).
+- Metro: polohy souprav z Golemia (kolejové obvody DPP) se zobrazují po trasách metra; trasy metra jsou vidět na mapě.
+
 ## 0.3.2 – 2026-10-01
 - 3D tramvaj a vlak podle dodaných ilustrací: střecha přímo z dodané grafiky shora, bílá karoserie, černý pás oken se sloupky a dveřmi, barevný spodek a skloněné čelo kabiny se světly.
 - Souprava je složená z částí podle grafiky (tramvaj 4, vlak 3) s měchy mezi nimi a v obloucích se ohýbá podél koleje.

@@ -26,7 +26,7 @@ export default function StopCard() {
     const r = await getJson<Envelope<DepartureBoard>>(`/api/departures?stop=${encodeURIComponent(key)}&limit=50`);
     setData({ key, env: r.body });
   }, [key]);
-  useVisibleInterval(() => void load(), 20_000, [key]);
+  useVisibleInterval(() => void load(), 10_000, [key]);
   if (!p) return null;
 
   const fav = isFavorite(favs, 'stop', p.groupKey);

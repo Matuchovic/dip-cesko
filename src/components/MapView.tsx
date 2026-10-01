@@ -59,8 +59,15 @@ export default function MapView({ styleUrl, demo }: { styleUrl: string; demo: bo
           appStore.set({ feedMeta: env.meta, feedError: fromCache ? lang.current.t('pill_offline') : null, feedOffline: fromCache, feedReceivedAt: receivedAt, feedCount: env.data.length });
         },
         onError: (message, offline) => appStore.set({ feedError: message, feedOffline: offline }),
-      }, 10_000, rotation ? '?scenario=rotation' : '');
+      }, () => (rotation ? 10_000 : (controller?.map.getZoom() ?? 0) >= 12 ? 3_000 : 12_000), () => {
+        if (rotation) return '?scenario=rotation';
+        const m = controller?.map;
+        if (!m || m.getZoom() < 12) return '';
+        const b = m.getBounds(), dx = (b.getEast() - b.getWest()) * 0.5, dy = (b.getNorth() - b.getSouth()) * 0.5;
+        return `?bbox=${[b.getWest() - dx, b.getSouth() - dy, b.getEast() + dx, b.getNorth() + dy].map((n) => n.toFixed(5)).join(',')}`;
+      });
       feed.start();
+      controller?.map.on('moveend', () => feed.refreshSoon());
       if (demo) (window as unknown as { __doprava?: unknown }).__doprava = { controller, map: controller?.map ?? null, feed };
 
       const unsubSettings = settingsStore.subscribe(() => controller?.setSettings(mapSettings()));

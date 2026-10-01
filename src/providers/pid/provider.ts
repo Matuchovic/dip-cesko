@@ -47,7 +47,7 @@ export function createPidProvider(cfg: Config): TransitProvider {
       if (!cfg.golemioKey) return unavailable<VehicleState[]>([], 'golemio:vehiclepositions', 'missing_api_key', 'Živé polohy PID vyžadují klíč Golemio API na serveru.');
       const key = cfg.golemioKey;
       try {
-        const r = await cfg.cache.get('pid:vehicles', { ttlMs: 10_000, staleMs: 180_000, canFetch: () => cfg.bucket.take() }, async () => {
+        const r = await cfg.cache.get('pid:vehicles', { ttlMs: 3_000, staleMs: 180_000, canFetch: () => cfg.bucket.take() }, async () => {
           const raw = await fetchJson(vehiclePositionsUrl(), { provider: 'golemio', allowHosts: [GOLEMIO_HOST], headers: golemioHeaders(key), timeoutMs: 15000, retries: 1, maxBytes: 60 * 1024 * 1024 });
           const { vehicles, invalid } = mapVehicleCollection(raw);
           if (invalid) log('warn', 'golemio.vehicles.invalid', { invalid, valid: vehicles.length });
@@ -73,7 +73,7 @@ export function createPidProvider(cfg: Config): TransitProvider {
       const asw = group.platforms.map((p) => toAswId(p.id)).filter((x): x is string => Boolean(x));
       const key = cfg.golemioKey;
       try {
-        const r = await cfg.cache.get(`pid:dep:${groupKey}:${limit}`, { ttlMs: 15_000, staleMs: 300_000, canFetch: () => cfg.bucket.take() }, async () => {
+        const r = await cfg.cache.get(`pid:dep:${groupKey}:${limit}`, { ttlMs: 8_000, staleMs: 300_000, canFetch: () => cfg.bucket.take() }, async () => {
           const raw = await fetchJson(departureBoardUrl(asw, limit), { provider: 'golemio', allowHosts: [GOLEMIO_HOST], headers: golemioHeaders(key), timeoutMs: 8000, retries: 1 });
           return mapDepartureBoard(raw, group.name);
         });

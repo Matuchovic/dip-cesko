@@ -1,5 +1,5 @@
 /* Doprava – service worker: offline obal aplikace a poslední data s jasně označeným stářím. */
-const VERSION = 'doprava-v3-2';
+const VERSION = 'doprava-v4';
 const SHELL = `${VERSION}-shell`, STATIC = `${VERSION}-static`, API = `${VERSION}-api`;
 const SHELL_URLS = ['/', '/odjezdy', '/spojeni', '/oblibene', '/jizdenky', '/nastaveni', '/map/offline-style.json', '/icons/icon-192.png'];
 const STATIC_PREFIXES = ['/_next/static/', '/vehicles/', '/icons/', '/map/', '/maplibre/'];

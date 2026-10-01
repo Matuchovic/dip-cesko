@@ -3,6 +3,7 @@ import {
   AmbientLight, BoxGeometry, Camera, CanvasTexture, Color, DataTexture, DirectionalLight, DynamicDrawUsage, HemisphereLight, InstancedMesh, Matrix4,
   MeshStandardMaterial, Object3D, RGBAFormat, Scene, SRGBColorSpace, TextureLoader, Vector3, WebGLRenderer, type Texture,
 } from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { VehicleAsset } from './assets';
 
 /** Vzhled podle dodaných ilustrací: bílá karoserie, černý pás oken, barevný spodek a čelo. */
@@ -67,6 +68,10 @@ function sideTexture(l: Livery, len: number, frontCab: boolean, rearCab: boolean
     c.fillStyle = '#D9DCE0'; c.fillRect(W / 2 - m(0.03), y(wt), m(0.06), m(wt - 0.1));
     c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(0, 0, W, m(0.06));
     const cab = (atRight: boolean) => {
+      // barevný klín od čela šikmo dozadu k oknům
+      const X = (v: number) => (atRight ? W - m(v) : m(v));
+      c.fillStyle = l.accent;
+      c.beginPath(); c.moveTo(X(0), y(0)); c.lineTo(X(0), y(H)); c.lineTo(X(1.0), y(H)); c.lineTo(X(2.9), y(wb)); c.lineTo(X(2.9), y(0)); c.closePath(); c.fill();
       const x0 = atRight ? W - m(1.5) : 0;
       c.fillStyle = l.accent; c.fillRect(x0, y(wb + 0.02), m(1.5), m(wb + 0.02));
       c.fillStyle = l.glass; c.fillRect(atRight ? W - m(1.1) : 0, y(H - 0.35), m(1.1), m(H - 0.35 - wb));
@@ -91,7 +96,7 @@ function cabTexture(l: Livery, width: number): Texture {
   }, l.accent);
 }
 
-interface Kit { sections: InstancedMesh[]; joints: InstancedMesh; materials: MeshStandardMaterial[]; textures: Texture[]; capacity: number }
+interface Kit { sections: InstancedMesh[]; joints: InstancedMesh; pantos: InstancedMesh; materials: MeshStandardMaterial[]; textures: Texture[]; capacity: number }
 
 /** Souprava po částech: každá část má střechu z dodaného PNG (pohled shora) a dopočtený bok a čelo. */
 export class ArticulatedLayer implements CustomLayerInterface {
@@ -136,7 +141,7 @@ export class ArticulatedLayer implements CustomLayerInterface {
     if (!asset?.pieces?.length || !asset.physical || !l) return null;
     const existing = this.kits.get(assetId);
     if (existing && existing.capacity >= count) return existing;
-    if (existing) for (const m of [...existing.sections, existing.joints]) { this.scene.remove(m); m.dispose(); }
+    if (existing) for (const m of [...existing.sections, existing.joints, existing.pantos]) { this.scene.remove(m); m.dispose(); }
     const capacity = Math.max(8, 2 ** Math.ceil(Math.log2(Math.max(1, count))));
     const L = asset.physical.lengthM, W = asset.physical.widthM, H = l.roof - l.base;
     const reuse = existing ? { materials: existing.materials, textures: existing.textures } : null;
@@ -148,10 +153,10 @@ export class ArticulatedLayer implements CustomLayerInterface {
     const n = asset.pieces.length;
     const sections = asset.pieces.map((pc, i) => {
       const len = (pc.toFront - pc.fromFront) * L;
+      const front = i === 0, rear = i === n - 1 && l.bidirectional;
       const geo = new BoxGeometry(W, H, len);
       geo.translate(0, l.base + H / 2, 0);
-      const front = i === 0, rear = i === n - 1 && l.bidirectional;
-      // Skloněné a mírně zúžené čelo kabiny místo svislé stěny.
+      // Skloněné a mírně zúžené čelo kabiny (jednoduchá geometrie – zaoblení se neosvědčilo, lámalo stínování).
       const pos = geo.getAttribute('position');
       for (let vi = 0; vi < pos.count; vi++) {
         const z = pos.getZ(vi), yv = pos.getY(vi), x = pos.getX(vi);
@@ -175,6 +180,20 @@ export class ArticulatedLayer implements CustomLayerInterface {
       this.scene.add(mesh);
       return mesh;
     });
+    const panto = (() => {
+      const pc0 = asset.pieces![0]!, len0 = (pc0.toFront - pc0.fromFront) * L, top = l.base + H, z0 = -len0 / 2 + len0 * 0.6;
+      const parts: BoxGeometry[] = [];
+      const add = (g: BoxGeometry, x: number, y: number, z: number, rx = 0) => { if (rx) g.rotateX(rx); g.translate(x, y, z); parts.push(g); };
+      add(new BoxGeometry(1.1, 0.12, 1.0), 0, top + 0.06, z0);                       // základna
+      add(new BoxGeometry(0.07, 0.07, 1.25), 0, top + 0.42, z0 - 0.35, -0.62);       // spodní rameno
+      add(new BoxGeometry(0.07, 0.07, 1.25), 0, top + 0.95, z0 - 0.35, 0.62);        // horní rameno
+      add(new BoxGeometry(1.7, 0.05, 0.1), 0, top + 1.26, z0 - 0.05);                // sběrač
+      const g = mergeGeometries(parts);
+      parts.forEach((x) => x.dispose());
+      return g;
+    })();
+    const pantos = new InstancedMesh(panto, mat({ color: 0x2b2e33, roughness: 0.5, metalness: 0.4 }), capacity);
+    pantos.instanceMatrix.setUsage(DynamicDrawUsage); pantos.frustumCulled = false; pantos.count = 0; this.scene.add(pantos);
     const jgeo = new BoxGeometry(W * 0.9, H - 0.25, 0.75);
     jgeo.translate(0, l.base + (H - 0.25) / 2, 0);
     const joints = new InstancedMesh(jgeo, dark, capacity * Math.max(1, n - 1));
@@ -182,7 +201,7 @@ export class ArticulatedLayer implements CustomLayerInterface {
     joints.frustumCulled = false;
     joints.count = 0;
     this.scene.add(joints);
-    const k = { sections, joints, materials, textures, capacity };
+    const k = { sections, joints, pantos, materials, textures, capacity };
     this.kits.set(assetId, k);
     return k;
   }
@@ -203,7 +222,7 @@ export class ArticulatedLayer implements CustomLayerInterface {
     if (!this.map) return;
     this.origin = MercatorCoordinate.fromLngLat(this.map.getCenter());
     const unit = this.origin.meterInMercatorCoordinateUnits();
-    for (const k of this.kits.values()) { for (const s of k.sections) s.count = 0; k.joints.count = 0; }
+    for (const k of this.kits.values()) { for (const s of k.sections) s.count = 0; k.joints.count = 0; k.pantos.count = 0; }
     if (this.enabled) {
       const byAsset = new Map<string, ArticulatedVehicle[]>();
       for (const v of this.vehicles) { const g = byAsset.get(v.assetId) ?? []; g.push(v); byAsset.set(v.assetId, g); }
@@ -215,12 +234,15 @@ export class ArticulatedLayer implements CustomLayerInterface {
           v.sections.forEach((s, si) => {
             const mesh = k.sections[si];
             if (!mesh) return;
-            mesh.setMatrixAt(i, this.place(s, v.scale, unit));
+            const mx = this.place(s, v.scale, unit);
+            mesh.setMatrixAt(i, mx);
             mesh.setColorAt(i, v.stale ? this.stale : this.live);
+            if (si === 0) k.pantos.setMatrixAt(i, mx);
           });
           for (const jt of v.joints) if (j < k.joints.instanceMatrix.count) { k.joints.setMatrixAt(j, this.place(jt, v.scale, unit)); k.joints.setColorAt(j++, v.stale ? this.stale : this.live); }
         });
         for (const s of k.sections) { s.count = list.length; s.instanceMatrix.needsUpdate = true; if (s.instanceColor) s.instanceColor.needsUpdate = true; }
+        k.pantos.count = list.length; k.pantos.instanceMatrix.needsUpdate = true;
         k.joints.count = j; k.joints.instanceMatrix.needsUpdate = true; if (k.joints.instanceColor) k.joints.instanceColor.needsUpdate = true;
       }
     }
@@ -273,7 +295,7 @@ export class ArticulatedLayer implements CustomLayerInterface {
   }
 
   onRemove() {
-    for (const k of this.kits.values()) { for (const m of [...k.sections, k.joints]) { m.geometry.dispose(); m.dispose(); } k.materials.forEach((m) => m.dispose()); k.textures.forEach((t) => t.dispose()); }
+    for (const k of this.kits.values()) { for (const m of [...k.sections, k.joints, k.pantos]) { m.geometry.dispose(); m.dispose(); } k.materials.forEach((m) => m.dispose()); k.textures.forEach((t) => t.dispose()); }
     this.kits.clear(); this.scene.clear(); this.renderer?.dispose(); this.renderer = null; this.map = null;
   }
 }

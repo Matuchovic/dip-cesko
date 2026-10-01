@@ -18,11 +18,10 @@ export const MODEL_ZOOM = 15.5;
 export function hasVehicleModel(mode: Mode): mode is ModelMode { return mode in VEHICLE_DIMENSIONS; }
 
 /** Modest enlargement at street overview; actual metre scale at close zoom. No 560 px billboard. */
-export function vehicleModelScale(mode: ModelMode, lat: number, zoom: number): number {
-  const length = VEHICLE_DIMENSIONS[mode].length;
-  const mpp = metersPerPixel(lat, zoom);
-  const screenLength = Math.min(340, Math.max(44, length / mpp));
-  return screenLength * mpp / length;
+export function vehicleModelScale(_mode: ModelMode, _lat: number, _zoom: number): number {
+  // Vždy skutečná velikost: model se při přibližování ani oddalování nemění vůči mapě.
+  void [_mode, _lat, _zoom, metersPerPixel];
+  return 1;
 }
 
 /** Model coordinates: X east, Y up, -Z north. Heading is clockwise from north. */

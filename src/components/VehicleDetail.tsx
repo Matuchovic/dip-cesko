@@ -29,6 +29,7 @@ export default function VehicleDetail() {
   const fav = isFavorite(favs, 'line', lineKey);
   const mode = modeName(t, v.route.mode);
   const onTrack = mapApi.controller?.isOnTrack(v.id) ?? false;
+  const predicted = mapApi.controller?.predictedSeconds(v.id) ?? 0;
   const freshLabel = isDemo ? t('fresh_demo') : freshness === 'live' ? t('fresh_live') : freshness === 'stale' ? t('fresh_stale') : freshness === 'expired' ? t('fresh_expired') : t('fresh_unknown');
 
   return (
@@ -59,7 +60,7 @@ export default function VehicleDetail() {
         <dt>{t('kv_delay')}</dt><dd>{delayTexts(t, v.delay).label}</dd>
         <dt>{t('kv_measured')}</dt><dd>{measured ? `${formatClockSeconds(measured)} (${t('ago', { s: age ?? 0 })})` : t('kv_noTime')}</dd>
         <dt>{t('kv_heading')}</dt><dd>{v.bearing === null ? t('kv_headingUnknown') : `${Math.round(v.bearing)}° ${v.bearingSource === 'derived' ? t('kv_derived') : t('kv_fromSource')}`}</dd>
-        <dt>{t('kv_track')}</dt><dd>{onTrack ? t('track_on') : t('track_off')}</dd>
+        <dt>{t('kv_track')}</dt><dd>{onTrack ? t('track_on') : t('track_off')}{predicted > 2 ? ` · ${t('kv_predicted', { s: predicted })}` : ''}</dd>
         {v.lastStopName && <><dt>{t('kv_lastStop')}</dt><dd>{v.lastStopName}</dd></>}
         {v.nextStopName && <><dt>{t('kv_nextStop')}</dt><dd>{v.nextStopName}</dd></>}
         {v.vehicleTypeLabel && <><dt>{t('kv_type')}</dt><dd>{v.vehicleTypeLabel}</dd></>}

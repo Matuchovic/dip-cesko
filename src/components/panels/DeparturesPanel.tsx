@@ -43,7 +43,7 @@ export default function DeparturesPanel() {
     } catch { /* přerušeno */ } finally { if (!c.signal.aborted) setLoading(false); }
   }, [key]);
 
-  useVisibleInterval(() => void load(), 20_000, [key]);
+  useVisibleInterval(() => void load(), 10_000, [key]);
 
   const group = board?.data.group ?? null;
   const fav = group ? isFavorite(favs, 'stop', group.key) : false;

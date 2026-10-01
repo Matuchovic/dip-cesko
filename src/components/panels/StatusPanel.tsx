@@ -3,10 +3,11 @@ import { useState } from 'react';
 import { appStore, mapApi } from '@/lib/app-state';
 import { useStore } from '@/lib/store';
 import { getJson, useVisibleInterval } from '@/lib/hooks';
-import { useT } from '@/i18n';
+import { modesName, useT } from '@/i18n';
+import type { Mode } from '@/domain/model';
 import { MESSAGES, type MessageKey } from '@/i18n/messages';
 
-interface Status { mode: 'demo' | 'live'; sources: { id: string; name: string; configured: boolean; lastSuccessAgeS: number | null }[]; time: string }
+interface Status { mode: 'demo' | 'live'; vehiclesByMode?: Record<string, number>; sources: { id: string; name: string; configured: boolean; lastSuccessAgeS: number | null }[]; time: string }
 
 export default function StatusPanel() {
   const t = useT();
@@ -33,6 +34,7 @@ export default function StatusPanel() {
         <li className="row"><span className="row-main"><span className="row-title">{t('st_basemapBrowser')}</span><span className="row-sub">{basemap === 'ok' ? t('st_loaded') : basemap === 'fallback' ? t('st_fallback') : t('loading')}</span></span></li>
         <li className="row"><span className="row-main"><span className="row-title">{t('st_vehiclesBrowser')}</span><span className="row-sub">{feedError ?? (feed?.reason ? t(`reason_${feed.reason}` as MessageKey) : feed ? t('st_state', { s: feed.status }) : t('loading'))}{tracks && tracks.all > 0 ? ` · ${t('st_tracks', { on: tracks.on, all: tracks.all })}` : ''}</span></span></li>
       </ul>
+      {s?.vehiclesByMode && Object.keys(s.vehiclesByMode).length > 0 && <p className="hint">{t('st_modes', { list: Object.entries(s.vehiclesByMode).sort((x, y) => y[1] - x[1]).map(([m, n]) => `${modesName(t, m as Mode)} ${n}`).join(' · ') })}</p>}
       <p className="footer-note">{t('st_footer')}</p>
     </>
   );

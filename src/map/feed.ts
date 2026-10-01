@@ -15,7 +15,15 @@ export class VehicleFeed {
   private failures = 0;
   private running = false;
 
-  constructor(private cb: FeedCallbacks, private intervalMs = 10_000, private query = '') {}
+  private soon: ReturnType<typeof setTimeout> | null = null;
+
+  /** Interval i dotaz se vyhodnocují při každém načtení (výřez mapy, přiblížení). */
+  constructor(private cb: FeedCallbacks, private interval: number | (() => number) = 10_000, private query: string | (() => string) = '') {}
+
+  private get intervalMs() { return typeof this.interval === 'function' ? this.interval() : this.interval; }
+
+  /** Po posunu mapy načíst nový výřez brzy (s krátkým zpožděním proti zahlcení). */
+  refreshSoon(ms = 400) { if (this.soon) clearTimeout(this.soon); this.soon = setTimeout(() => this.refreshNow(), ms); }
 
   start() {
     if (this.running) return;
@@ -54,7 +62,8 @@ export class VehicleFeed {
     this.ctrl = ctrl;
     const timeout = setTimeout(() => ctrl.abort(), 15_000);
     try {
-      const res = await fetch(`/api/vehicles${this.query}`, { signal: ctrl.signal, cache: 'no-store' });
+      const q = typeof this.query === 'function' ? this.query() : this.query;
+      const res = await fetch(`/api/vehicles${q}`, { signal: ctrl.signal, cache: 'no-store' });
       if (res.status === 429) throw new Error('Příliš mnoho požadavků – zpomalujeme obnovu.');
       const body = (await res.json()) as Envelope<VehicleState[]>;
       if (!body || !Array.isArray(body.data) || !body.meta) throw new Error('Neplatná odpověď serveru');

@@ -118,6 +118,7 @@ export class MapController {
     this.modelLayer.setEnabled(this.settings.vehicleStyle === 'models');
     this.artLayer.setEnabled(this.settings.vehicleStyle === 'models');
     this.styleBuildings();
+    this.addSubwayLines();
     this.applyBuildings();
     this.applyLabels();
     this.ready = true;
@@ -266,7 +267,9 @@ export class MapController {
 
   private articulated(id: string, art: VehicleAsset, body: LngLat[], len: number, mid: LngLat, heading: number, mpp: number, stale: boolean): ArticulatedVehicle {
     const L = art.physical!.lengthM, W = art.physical!.widthM;
-    const scale = Math.max(1, 44 / (L / mpp));
+    // Skutečná velikost při každém přiblížení (žádné zvětšování při oddálení).
+    const scale = 1;
+    void mpp;
     let b = body;
     if (scale > 1.001 || len < L * 0.9) {
       const r = heading * D2R, half = (L * scale) / 2;
@@ -326,7 +329,7 @@ export class MapController {
     if (!this.ready || this.destroyed) return;
     const now = Date.now();
     const z = this.map.getZoom();
-    const animating = this.follower.animator.isAnimating(now);
+    const animating = this.follower.animator.isAnimating(now) || this.follower.isMoving(now);
     const minGap = this.settings.reducedMotion ? 1000 : 33;
     if (z >= LIVE_ZOOM - 0.3 && now - this.lastPush >= minGap) { this.pushLive(now); this.lastPush = now; }
     const following = this.follow && this.selectedId ? this.followStep(now) : false;
@@ -381,7 +384,7 @@ export class MapController {
       if (hasBody && zoom >= SPRITE_ZOOM) {
         const dims = model && hasVehicleModel(mode) ? (art?.physical ? { length: art.physical.lengthM, width: art.physical.widthM, height: roofHeight(art.id) } : VEHICLE_DIMENSIONS[mode]) : null;
         const L = dims?.length ?? shape.lengthM, W = dims?.width ?? shape.widthM, H = dims?.height ?? 3.6;
-        const f = dims ? Math.min(340, Math.max(44, L / mpp)) / (L / mpp) : 1;
+        const f = 1;
         const lenPx = (L / mpp) * f, widPx = (W / mpp) * f;
         const th = ((s.bearing as number) - mapBearing) * D2R;
         off = (Math.abs(Math.cos(th)) * lenPx * pitchK + Math.abs(Math.sin(th)) * widPx) / 2 + 7 + (model || this.pitchedMode ? ((H / mpp) * f) * Math.sin(pitch * D2R) : 0);
@@ -535,6 +538,7 @@ export class MapController {
       const res = await fetch(`/api/stops?bbox=${bbox}`, { signal: ctrl.signal });
       if (!res.ok) return;
       const body = (await res.json()) as { data: StopPoint[] | null };
+      this.follower.setStops((body.data ?? []).map((p) => ({ lng: p.lon, lat: p.lat })));
       const features: Feature[] = (body.data ?? []).map((p) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [p.lon, p.lat] },
         properties: { mode: p.modes[0] ?? 'other', label: `s|${p.name.replace(/\|/g, '/')}|${p.platform ?? ''}`, rank: p.modes[0] === 'metro' ? 0 : p.modes[0] === 'train' ? 1 : 2, json: JSON.stringify(p) } }));
       (this.map.getSource(STOPS) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features });
@@ -598,6 +602,17 @@ export class MapController {
     try { this.map.setSky({ 'sky-color': '#BCD8F5', 'horizon-color': '#EAF1F7', 'fog-color': '#EEF2F5', 'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.7, 'fog-ground-blend': 0.9 }); } catch { /* volitelné */ }
   }
 
+  /** Trasy metra z mapových dat (pod zemí, v podkladu jinak nejsou vidět) – soupravy metra jedou po nich. */
+  private addSubwayLines() {
+    const src = this.transportSource();
+    if (!src?.layer || this.map.getLayer('dop-subway')) return;
+    try {
+      this.map.addLayer({ id: 'dop-subway', type: 'line', source: src.id, 'source-layer': src.layer, minzoom: 11, filter: ['==', ['get', 'subclass'], 'subway'],
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#7B4DFF', 'line-opacity': 0.5, 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 1.2, 17, 4], 'line-dasharray': [2, 1.6] } } as LayerSpecification, 'dop-stops-dot');
+    } catch { /* styl bez vrstvy transportation */ }
+  }
+
   modelDiagnostics() {
     const m = this.modelLayer.diagnostics(), a = this.artLayer.diagnostics();
     return { ...m, instances: m.instances + a.instances, meshes: m.meshes + a.meshes, drawCalls: m.drawCalls + a.drawCalls };
@@ -637,6 +652,8 @@ export class MapController {
   }
 
   isOnTrack(id: string): boolean { return this.follower.isOnTrack(id); }
+  /** Kolik sekund od posledního měření je poloha dopočtená po trati (0 = přímo měření). */
+  predictedSeconds(id: string): number { return this.follower.sample(id, Date.now())?.predictedS ?? 0; }
 
   /** Pro testy a diagnostiku: kolik vozidel je právě navázaných na trať. */
   trackStats() { let on = 0, all = 0; for (const id of this.vehicles.keys()) { all++; if (this.follower.isOnTrack(id)) on++; } return { on, all }; }

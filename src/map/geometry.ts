@@ -79,3 +79,19 @@ export function concat(a: readonly LngLat[], b: readonly LngLat[]): LngLat[] {
   if (!b.length) return [...a];
   return distM(a[a.length - 1]!, b[0]!) < 0.05 ? [...a, ...b.slice(1)] : [...a, ...b];
 }
+
+/** Kolmý průmět bodu na lomenou čáru: vzdálenost podél čáry a boční odchylka (m). */
+export function projectOnPolyline(pts: readonly LngLat[], p: LngLat): { along: number; dist: number } {
+  const kx = mPerDegLng(p.lat), ky = M_PER_DEG_LAT;
+  let best = { along: 0, dist: Infinity }, acc = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1]!, b = pts[i]!;
+    const ax = (a.lng - p.lng) * kx, ay = (a.lat - p.lat) * ky, bx = (b.lng - p.lng) * kx, by = (b.lat - p.lat) * ky;
+    const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy, len = Math.sqrt(l2);
+    const t = l2 > 0 ? Math.min(1, Math.max(0, -(ax * dx + ay * dy) / l2)) : 0;
+    const d = Math.hypot(ax + t * dx, ay + t * dy);
+    if (d < best.dist) best = { along: acc + t * len, dist: d };
+    acc += len;
+  }
+  return best;
+}
