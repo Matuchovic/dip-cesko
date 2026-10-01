@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2 – 2026-10-01
+- 3D tramvaj a vlak podle dodaných ilustrací: střecha přímo z dodané grafiky shora, bílá karoserie, černý pás oken se sloupky a dveřmi, barevný spodek a skloněné čelo kabiny se světly.
+- Souprava je složená z částí podle grafiky (tramvaj 4, vlak 3) s měchy mezi nimi a v obloucích se ohýbá podél koleje.
+- Světlejší osvětlení boků vozidel.
+- Na mapě jsou všechna vozidla: Golemio vracelo bez parametru jen prvních 100 vozidel – nyní až 10 000 včetně vozů čekajících na výjezd; dokončené spoje se nezobrazují.
+
 ## 0.3.1 – 2026-10-01
 - 3D budovy: světlé pastelové fasády a jemně cihlové střechy místo tmavých stěn a sytých střech; bez barev z OSM (černé a modré bloky); měkčí světlo.
 - Klidnější podklad: skryté drobné body zájmu a duplicitní značky zastávek z podkladu.

@@ -146,3 +146,21 @@ describe('plánovač OpenTripPlanner (GTFS GraphQL)', () => {
     expect(mapPlanResponse({ data: { planConnection: { routingErrors: [], edges: [] } } })).toEqual([]);
   });
 });
+
+describe('úplnost poloh vozidel z Golemia', () => {
+  it('URL žádá maximum vozidel (výchozí limit Golemia je jen 100) včetně vozů před výjezdem', async () => {
+    const { vehiclePositionsUrl } = await import('@/providers/pid/golemio');
+    const u = new URL(vehiclePositionsUrl());
+    expect(u.searchParams.get('limit')).toBe('10000');
+    expect(u.searchParams.get('includeNotTracking')).toBe('true');
+  });
+  it('dokončené spoje vyřadí a u téhož vozu dá přednost spoji na trase', async () => {
+    const { mapVehicleCollection } = await import('@/providers/pid/golemio');
+    const f = (state: string, trip: string, lng: number) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [lng, 50.08] },
+      properties: { last_position: { state_position: state, origin_timestamp: '2026-10-01T20:00:00+02:00', bearing: 90, delay: { actual: 0 } },
+        trip: { vehicle_registration_number: 9257, gtfs: { trip_id: trip, route_short_name: '11', route_type: 0 } } } });
+    const out = mapVehicleCollection({ features: [f('before_track', 'b', 14.40), f('on_track', 'a', 14.42), f('after_track', 'c', 14.43)] });
+    expect(out.vehicles).toHaveLength(1);
+    expect(out.vehicles[0]!.lon).toBeCloseTo(14.42);
+  });
+});

@@ -86,20 +86,22 @@ export function mapVehicleFeature(raw: unknown): VehicleState | null {
   };
 }
 
+const STATE_PRIORITY: Record<string, number> = { on_track: 3, at_stop: 3, off_track: 2, before_track: 1, unknown: 1, canceled: 0 };
+
 export function mapVehicleCollection(raw: unknown, limit = 6000): { vehicles: VehicleState[]; invalid: number } {
   const features = z.object({ features: z.array(z.unknown()) }).safeParse(raw);
   if (!features.success) throw new Error('Neočekávaný formát poloh vozidel');
-  const vehicles: VehicleState[] = [];
-  const seen = new Set<string>();
+  const byId = new Map<string, VehicleState>();
   let invalid = 0;
   for (const f of features.data.features.slice(0, limit)) {
     const v = mapVehicleFeature(f);
     if (!v) { invalid++; continue; }
-    if (seen.has(v.id)) continue;
-    seen.add(v.id);
-    vehicles.push(v);
+    if (v.positionState === 'after_track') continue; // spoj už skončil – vůz se nezobrazuje
+    const prev = byId.get(v.id);
+    // Tentýž vůz může mít probíhající i navazující spoj: přednost má ten, který je na trase.
+    if (!prev || (STATE_PRIORITY[v.positionState] ?? 1) > (STATE_PRIORITY[prev.positionState] ?? 1)) byId.set(v.id, v);
   }
-  return { vehicles, invalid };
+  return { vehicles: [...byId.values()], invalid };
 }
 
 const TimeObj = z.object({ predicted: nstr, scheduled: nstr }).partial().nullish();
@@ -162,7 +164,9 @@ export function golemioHeaders(key: string): Record<string, string> {
 }
 
 export function vehiclePositionsUrl(): string {
-  return `${GOLEMIO_BASE}/v2/vehiclepositions?preferredTimezone=Europe%2FPrague`;
+  // Golemio vrací bez parametru jen prvních 100 vozidel (výchozí limit podle OpenAPI @golemio/pid) – proto maximum 10 000.
+  // includeNotTracking přidá i vozy čekající na výjezd (před trasou); dokončené spoje se odfiltrují.
+  return `${GOLEMIO_BASE}/v2/vehiclepositions?limit=10000&includeNotTracking=true&preferredTimezone=Europe%2FPrague`;
 }
 
 export function departureBoardUrl(aswIds: string[], limit: number): string {

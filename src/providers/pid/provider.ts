@@ -48,7 +48,7 @@ export function createPidProvider(cfg: Config): TransitProvider {
       const key = cfg.golemioKey;
       try {
         const r = await cfg.cache.get('pid:vehicles', { ttlMs: 10_000, staleMs: 180_000, canFetch: () => cfg.bucket.take() }, async () => {
-          const raw = await fetchJson(vehiclePositionsUrl(), { provider: 'golemio', allowHosts: [GOLEMIO_HOST], headers: golemioHeaders(key), timeoutMs: 9000, retries: 1, maxBytes: 40 * 1024 * 1024 });
+          const raw = await fetchJson(vehiclePositionsUrl(), { provider: 'golemio', allowHosts: [GOLEMIO_HOST], headers: golemioHeaders(key), timeoutMs: 15000, retries: 1, maxBytes: 60 * 1024 * 1024 });
           const { vehicles, invalid } = mapVehicleCollection(raw);
           if (invalid) log('warn', 'golemio.vehicles.invalid', { invalid, valid: vehicles.length });
           const newest = vehicles.reduce((m, v) => Math.max(m, v.measuredAt ? Date.parse(v.measuredAt) : 0), 0);

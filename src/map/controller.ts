@@ -9,7 +9,8 @@ import { badgeImage, clusterImage, stopLabelImage } from './images';
 import { TrackFollower } from './follower';
 import { TrackNetwork, type TrackKind } from './tracks';
 import { buildExtrusions, buildPieces, DEFAULT_SHAPES, type VehicleShape } from './vehicle3d';
-import { bearingDeg, D2R, pointAlong, polyLength, type LngLat } from './geometry';
+import { bearingDeg, D2R, offsetM, pointAlong, polyLength, type LngLat } from './geometry';
+import { ArticulatedLayer, ARTICULATED_ASSETS, roofHeight, type ArticulatedVehicle } from './articulated-layer';
 import { VehicleLayer, type ModelVehicle } from './vehicle-layer';
 import { hasVehicleModel, MODEL_ZOOM as MODEL3D_ZOOM, VEHICLE_DIMENSIONS, type VehicleStyle } from './vehicle-presentation';
 
@@ -49,6 +50,7 @@ export class MapController {
   readonly map: MlMap;
   private follower: TrackFollower;
   private modelLayer = new VehicleLayer();
+  private artLayer = new ArticulatedLayer(manifest.assets);
   private vehicles = new Map<string, VehicleState>();
   private modes = new Set<Mode>(MODES);
   private selectedId: string | null = null;
@@ -112,7 +114,9 @@ export class MapController {
     this.addLayers();
     try { this.map.setProjection({ type: 'mercator' }); } catch { /* styl bez projekce */ }
     if (!this.map.getLayer(this.modelLayer.id)) this.map.addLayer(this.modelLayer, 'dop-badge');
+    if (!this.map.getLayer(this.artLayer.id)) this.map.addLayer(this.artLayer, 'dop-badge');
     this.modelLayer.setEnabled(this.settings.vehicleStyle === 'models');
+    this.artLayer.setEnabled(this.settings.vehicleStyle === 'models');
     this.styleBuildings();
     this.applyBuildings();
     this.applyLabels();
@@ -249,9 +253,31 @@ export class MapController {
   }
 
   private lengthFor(mode: Mode): number {
-    if (this.settings.vehicleStyle === 'models' && hasVehicleModel(mode)) return VEHICLE_DIMENSIONS[mode].length;
+    if (this.settings.vehicleStyle === 'models' && hasVehicleModel(mode) && !this.articulatedAsset(mode)) return VEHICLE_DIMENSIONS[mode].length;
     const a = mapAssetFor(mode);
     return a?.physical?.lengthM ?? DEFAULT_SHAPES[mode].lengthM;
+  }
+
+  /** Tramvaj a vlak: 3D souprava z dodané grafiky (střecha z PNG shora), po částech podél koleje. */
+  private articulatedAsset(mode: Mode): VehicleAsset | null {
+    const a = mapAssetFor(mode);
+    return a && ARTICULATED_ASSETS.includes(a.id) && a.pieces?.length && a.physical ? a : null;
+  }
+
+  private articulated(id: string, art: VehicleAsset, body: LngLat[], len: number, mid: LngLat, heading: number, mpp: number, stale: boolean): ArticulatedVehicle {
+    const L = art.physical!.lengthM, W = art.physical!.widthM;
+    const scale = Math.max(1, 44 / (L / mpp));
+    let b = body;
+    if (scale > 1.001 || len < L * 0.9) {
+      const r = heading * D2R, half = (L * scale) / 2;
+      b = [offsetM(mid, -Math.sin(r) * half, -Math.cos(r) * half), offsetM(mid, Math.sin(r) * half, Math.cos(r) * half)];
+    }
+    const bl = polyLength(b), Ls = L * scale;
+    const at = (f: number) => pointAlong(b, Math.max(0, bl - f * Ls)).p;
+    const pieces = art.pieces!;
+    const sections = pieces.map((pc) => { const F = at(pc.fromFront), R = at(pc.toFront); return { lng: (F.lng + R.lng) / 2, lat: (F.lat + R.lat) / 2, bearing: bearingDeg(R, F) }; });
+    const joints = pieces.slice(0, -1).map((pc) => { const P = at(pc.toFront), A = at(Math.max(0, pc.toFront - 0.02)), B = at(Math.min(1, pc.toFront + 0.02)); return { lng: P.lng, lat: P.lat, bearing: bearingDeg(B, A) }; });
+    return { id, assetId: art.id, stale, scale, sections, joints, center: { lng: mid.lng, lat: mid.lat, bearing: heading }, length: L, width: W };
   }
 
   private shapeFor(v: VehicleState, asset: VehicleAsset | null, stale: boolean, sel: boolean, detail: boolean): VehicleShape {
@@ -317,6 +343,7 @@ export class MapController {
     const style = this.settings.vehicleStyle;
     const want3d = style === 'sprites' && this.pitchedMode && zoom >= MODEL_ZOOM && now - this.last3d >= (this.settings.reducedMotion ? 1000 : 90);
     const models: ModelVehicle[] = [];
+    const arts: ArticulatedVehicle[] = [];
     const center = this.map.getCenter();
     const live: Feature[] = [], pieces: Feature[] = [], solids: Feature[] = [];
     const visible: { id: string; d: number }[] = [];
@@ -341,16 +368,18 @@ export class MapController {
       const sprite = Boolean(asset && hasBody && asset.pieces?.length && this.map.hasImage(`${asset.id}#0`));
       const mode = v.route.mode;
       const model = style === 'models' && hasBody && zoom >= MODEL3D_ZOOM && hasVehicleModel(mode);
+      const art = model ? this.articulatedAsset(mode) : null;
       if (model && hasVehicleModel(mode)) {
         const b = s.body;
         const heading = len > 1 ? bearingDeg(b[0]!, b[b.length - 1]!) : (s.bearing as number);
-        models.push({ id, mode, lng: mid.lng, lat: mid.lat, bearing: heading, stale });
+        if (art) arts.push(this.articulated(id, art, b, len, mid, heading, mpp, stale));
+        else models.push({ id, mode, lng: mid.lng, lat: mid.lat, bearing: heading, stale });
       }
       const shape = this.shapeFor(v, asset, stale, sel, rank < DETAIL_3D_MAX);
       const state = sel ? 'selected' : stale ? 'stale' : 'live';
       let off = zoom < SPRITE_ZOOM ? 9 : 15;
       if (hasBody && zoom >= SPRITE_ZOOM) {
-        const dims = model && hasVehicleModel(mode) ? VEHICLE_DIMENSIONS[mode] : null;
+        const dims = model && hasVehicleModel(mode) ? (art?.physical ? { length: art.physical.lengthM, width: art.physical.widthM, height: roofHeight(art.id) } : VEHICLE_DIMENSIONS[mode]) : null;
         const L = dims?.length ?? shape.lengthM, W = dims?.width ?? shape.widthM, H = dims?.height ?? 3.6;
         const f = dims ? Math.min(340, Math.max(44, L / mpp)) / (L / mpp) : 1;
         const lenPx = (L / mpp) * f, widPx = (W / mpp) * f;
@@ -367,6 +396,7 @@ export class MapController {
     });
     (this.map.getSource(LIVE) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: live });
     this.modelLayer.setVehicles(style === 'models' ? models : []);
+    this.artLayer.setVehicles(style === 'models' ? arts : []);
     if (!this.pitchedMode || zoom < SPRITE_ZOOM) (this.map.getSource(PIECES) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: pieces });
     if (want3d) { (this.map.getSource(V3D) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: solids }); this.last3d = now; }
   }
@@ -462,13 +492,14 @@ export class MapController {
 
   private hover(x: number, y: number) {
     if (this.coarse) return;
-    const onModel = this.settings.vehicleStyle === 'models' && this.modelLayer.pick(x, y, 10) !== null;
+    const onModel = this.settings.vehicleStyle === 'models' && (this.artLayer.pick(x, y, 10) ?? this.modelLayer.pick(x, y, 10)) !== null;
     this.map.getCanvas().style.cursor = onModel || this.pick(x, y) ? 'pointer' : '';
   }
 
   private async handleClick(x: number, y: number) {
     if (this.settings.vehicleStyle === 'models') {
-      const hit = this.modelLayer.pick(x, y, this.coarse ? 26 : 14);
+      const r = this.coarse ? 26 : 14;
+      const hit = this.artLayer.pick(x, y, r) ?? this.modelLayer.pick(x, y, r);
       if (hit) { this.events.onStop(null); this.select(hit); return; }
     }
     const f = this.pick(x, y);
@@ -518,6 +549,7 @@ export class MapController {
     this.follower.animator.setReducedMotion(s.reducedMotion);
     if (!this.ready) return;
     this.modelLayer.setEnabled(s.vehicleStyle === 'models');
+    this.artLayer.setEnabled(s.vehicleStyle === 'models');
     if (prev.vehicleStyle !== s.vehicleStyle) {
       for (const id of [PIECES, V3D]) (this.map.getSource(id) as GeoJSONSource | undefined)?.setData(EMPTY);
       this.applyPitchMode(true);
@@ -566,7 +598,10 @@ export class MapController {
     try { this.map.setSky({ 'sky-color': '#BCD8F5', 'horizon-color': '#EAF1F7', 'fog-color': '#EEF2F5', 'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.7, 'fog-ground-blend': 0.9 }); } catch { /* volitelné */ }
   }
 
-  modelDiagnostics() { return this.modelLayer.diagnostics(); }
+  modelDiagnostics() {
+    const m = this.modelLayer.diagnostics(), a = this.artLayer.diagnostics();
+    return { ...m, instances: m.instances + a.instances, meshes: m.meshes + a.meshes, drawCalls: m.drawCalls + a.drawCalls };
+  }
 
   zoomBy(delta: number) { this.map.easeTo({ zoom: this.map.getZoom() + delta, duration: this.settings.reducedMotion ? 0 : 300 }); }
   resetNorth() { this.map.easeTo({ bearing: 0, duration: this.settings.reducedMotion ? 0 : 500 }); }
