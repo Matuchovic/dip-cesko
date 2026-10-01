@@ -2,6 +2,8 @@ import { nsId } from '@/domain/ids';
 import { initialBearingDeg, lerpLngLat, inBBox, type BBox } from '@/domain/geo';
 import { knownDelay, UNKNOWN_DELAY, type Alert, type Departure, type Envelope, type Mode, type SourceMeta, type StopGroup, type StopPoint, type VehicleState } from '@/domain/model';
 import { normalizeName } from '../pid/stops';
+import { pointAlong, polyLength } from '@/map/geometry';
+import { DEMO_TRACK_7 } from './track';
 import type { TransitProvider } from '../types';
 
 /**
@@ -51,9 +53,26 @@ const RUNS: DemoRun[] = [
   { reg: '9005', line: '9', mode: 'tram', headsign: 'Sídliště Řepy', a: pt('Anděl', 'A'), b: pt('Anděl', 'B'), periodS: 90, phaseS: 0, delayS: 0, bearingKnown: true, ageOffsetS: 200 },
 ];
 
+const TRACK7 = DEMO_TRACK_7.map(([lng, lat]) => ({ lng, lat }));
+const TRACK7_LEN = polyLength(TRACK7);
+
+/** Ukázková tramvaj na oblouku: měření po 10 s (GPS posunutá o 4 m vedle koleje), jízda tam i zpět. */
+function curveRun(measuredMs: number): VehicleState {
+  const t = ((measuredMs / 1000) % 120) / 120;
+  const forward = t < 0.5;
+  const d = (forward ? t * 2 : (1 - t) * 2) * TRACK7_LEN;
+  const at = pointAlong(TRACK7, d);
+  const b = at.bearing === null ? 0 : forward ? at.bearing : (at.bearing + 180) % 360;
+  const gps = { lng: at.p.lng + 0.00004, lat: at.p.lat + 0.00002 };
+  return { id: nsId('demo', 'vehicle', '9350'), route: { id: nsId('demo', 'route', '7'), shortName: '7', mode: 'tram' }, tripId: nsId('demo', 'trip', '7-9350'),
+    headsign: forward ? 'Radlická' : 'Anděl', lat: gps.lat, lon: gps.lng, bearing: Math.round(b), bearingSource: 'provider', speedMps: 6,
+    delay: knownDelay(120), measuredAt: new Date(measuredMs).toISOString(), registration: '9350', vehicleTypeLabel: null, wheelchair: true, airConditioned: true,
+    isCanceled: false, positionState: 'on_track', lastStopName: 'Anděl', nextStopName: null };
+}
+
 /** Poloha se „měří“ po 10 s – klient tak ověřuje interpolaci mezi měřeními. */
 export function demoVehicles(nowMs: number): VehicleState[] {
-  return RUNS.map((r) => {
+  return [curveRun(Math.floor(nowMs / 10_000) * 10_000), ...RUNS.map((r): VehicleState => {
     const measuredMs = Math.floor(nowMs / 10_000) * 10_000 - (r.ageOffsetS ?? 0) * 1000;
     const t = (((measuredMs / 1000 + r.phaseS) % r.periodS) + r.periodS) % r.periodS / r.periodS;
     const forward = t < 0.5;
@@ -68,11 +87,11 @@ export function demoVehicles(nowMs: number): VehicleState[] {
       registration: r.reg, vehicleTypeLabel: null, wheelchair: true, airConditioned: r.mode === 'tram' ? true : null, isCanceled: false,
       positionState: 'on_track', lastStopName: 'Anděl', nextStopName: null,
     };
-  });
+  })];
 }
 
 /** Testovací vozidla pro ověření natočení: každé kategorie čtyři směry (S, V, J, Z) a přechod 359°→1°. */
-export function demoRotationVehicles(nowMs: number, centerLng = 14.4035, centerLat = 50.0716): VehicleState[] {
+export function demoRotationVehicles(nowMs: number, centerLng = 14.38, centerLat = 50.06): VehicleState[] {
   const dirs: [string, number][] = [['N', 0], ['E', 90], ['S', 180], ['W', 270]];
   const out: VehicleState[] = [];
   (['tram', 'train'] as Mode[]).forEach((mode, row) => dirs.forEach(([name, deg], i) => {

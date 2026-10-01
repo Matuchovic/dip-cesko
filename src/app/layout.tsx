@@ -9,6 +9,8 @@ import '@fontsource/plus-jakarta-sans/latin-500.css';
 import '@fontsource/plus-jakarta-sans/latin-700.css';
 import '@fontsource/plus-jakarta-sans/latin-800.css';
 import '@/styles/globals.css';
+import { isRtl } from '@/i18n/locales';
+import { resolveLocale } from '@/i18n/server';
 
 export const metadata: Metadata = {
   title: { default: 'Doprava — Celé Česko', template: '%s · Doprava' },
@@ -23,11 +25,12 @@ export const viewport: Viewport = {
   themeColor: [{ media: '(prefers-color-scheme: light)', color: '#F4F3F8' }, { media: '(prefers-color-scheme: dark)', color: '#0F0C1C' }],
 };
 
-const themeInit = `try{var s=JSON.parse(localStorage.getItem('doprava.settings.v1')||'{}');var t=s.theme||'system';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';}catch(e){}`;
+const themeInit = `try{var s=JSON.parse(localStorage.getItem('doprava.settings.v1')||'{}');var t=s.theme||'light';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';}catch(e){}`;
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const locale = await resolveLocale();
   return (
-    <html lang="cs" suppressHydrationWarning>
+    <html lang={locale} dir={isRtl(locale) ? 'rtl' : 'ltr'} suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: themeInit }} /></head>
       <body>{children}</body>
     </html>

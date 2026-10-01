@@ -7,11 +7,11 @@
 # a build, udělá commit + tag verze a pushne. Když cokoli selže, nic se nepushne.
 set -euo pipefail
 
-REPO_URL="${REPO_URL:-https://github.com/Matuchovic/doprava-cesko.git}"
-VERSION="0.1.0"
+REPO_URL="${REPO_URL:-https://github.com/Matuchovic/dip-cesko.git}"
+VERSION="0.2.0"
 TAR="${1:-$HOME/Downloads/doprava-cesko-$VERSION.tar}"
 WORK="/tmp/doprava-deploy"
-MSG_TITLE="$VERSION: první verze Doprava — Celé Česko"
+MSG_TITLE="$VERSION: vozidla na trati, 3D, odjezdy po linkách, 7 jazyků"
 MSG_BODY="- Mapa (MapLibre + OpenFreeMap) s vozidly PID: PNG shora natáčené podle směru jízdy, úrovně detailu, výběr i na telefonu
 - Odjezdy (nula vs. neznámé zpoždění, zrušené spoje), spojení přes OpenTripPlanner, oblíbené, jízdenky, nastavení, stav dat
 - Serverová vrstva: sdílená cache, timeouty, limit Golemio 20/8 s, při výpadku poslední data se stářím

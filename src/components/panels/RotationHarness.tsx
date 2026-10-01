@@ -6,7 +6,7 @@ import { useStore } from '@/lib/store';
 export default function RotationHarness() {
   const bearing = useStore(appStore, (s) => s.bearing);
   const ready = useStore(appStore, (s) => s.mapReady);
-  const go = (b: number) => { const c = mapApi.controller; if (!c) return; c.map.jumpTo({ center: [14.4035, 50.0716], zoom: 17.2, bearing: b, pitch: 0 }); };
+  const go = (b: number) => { const c = mapApi.controller; if (!c) return; c.map.jumpTo({ center: [14.38, 50.06], zoom: 17.2, bearing: b, pitch: 0 }); };
   return (
     <>
       <h1>Test natočení vozidel</h1>

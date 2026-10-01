@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { Envelope, StopGroup } from '@/domain/model';
-import { MODE_LABEL } from '@/domain/modes';
+import { modeName, useT } from '@/i18n';
 import { getJson } from '@/lib/hooks';
 import { LineBadge } from './ui';
 
@@ -13,6 +13,7 @@ export default function StopSearch({ label, placeholder, onSelect, initial = '',
   extraOption?: { label: string; onPick: () => void };
 }) {
   const id = useId();
+  const t = useT();
   const [q, setQ] = useState(initial);
   const [prevInitial, setPrevInitial] = useState(initial);
   if (initial !== prevInitial) { setPrevInitial(initial); setQ(initial); }
@@ -25,7 +26,7 @@ export default function StopSearch({ label, placeholder, onSelect, initial = '',
 
   useEffect(() => {
     if (!searching) return;
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       ctrl.current?.abort();
       const c = new AbortController();
       ctrl.current = c;
@@ -33,12 +34,12 @@ export default function StopSearch({ label, placeholder, onSelect, initial = '',
         const r = await getJson<Envelope<StopGroup[]>>(`/api/stops?q=${encodeURIComponent(term)}`, c.signal);
         const items = r.body?.data ?? [];
         const failed = !r.ok || r.body?.meta.status === 'unavailable' || r.body?.meta.status === 'error';
-        setResult({ term, items, state: failed ? 'error' : items.length ? 'ready' : 'empty', message: r.body?.meta.message ?? 'Vyhledávání zastávek není dostupné.' });
+        setResult({ term, items, state: failed ? 'error' : items.length ? 'ready' : 'empty', message: t('ss_unavailable') });
         setActive(0);
       } catch { /* přerušeno novým dotazem */ }
     }, 200);
-    return () => clearTimeout(t);
-  }, [searching, term]);
+    return () => clearTimeout(timer);
+  }, [searching, term, t]);
 
   const current = searching && result?.term === term ? result : null;
   const state = !searching ? 'idle' : current ? current.state : 'loading';
@@ -63,13 +64,13 @@ export default function StopSearch({ label, placeholder, onSelect, initial = '',
       {showList && (
         <ul id={listId} role="listbox" className="combo-list" aria-label={label}>
           {extraOption && <li role="option" aria-selected={false} onMouseDown={(e) => { e.preventDefault(); setQ(extraOption.label); setOpen(false); extraOption.onPick(); }}><strong>{extraOption.label}</strong></li>}
-          {state === 'loading' && <li role="option" aria-selected={false} aria-disabled>Hledám…</li>}
-          {state === 'empty' && <li role="option" aria-selected={false} aria-disabled>Žádná zastávka neodpovídá „{term}“.</li>}
+          {state === 'loading' && <li role="option" aria-selected={false} aria-disabled>{t('ss_searching')}</li>}
+          {state === 'empty' && <li role="option" aria-selected={false} aria-disabled>{t('ss_none', { q: term })}</li>}
           {state === 'error' && <li role="option" aria-selected={false} aria-disabled>{current?.message}</li>}
           {items.map((g, i) => (
             <li key={g.key} id={`${id}-o${i}`} role="option" aria-selected={i === active} onMouseDown={(e) => { e.preventDefault(); pick(g); }}>
-              <LineBadge line={MODE_LABEL[g.modes[0] ?? 'other'].slice(0, 1)} mode={g.modes[0] ?? 'other'} />
-              <span><span className="row-title">{g.name}</span><br /><span className="combo-sub">{[g.municipality, g.modes.map((m) => MODE_LABEL[m]).join(', ')].filter(Boolean).join(' · ')}</span></span>
+              <LineBadge line={modeName(t, g.modes[0] ?? 'other').slice(0, 1)} mode={g.modes[0] ?? 'other'} />
+              <span><span className="row-title">{g.name}</span><br /><span className="combo-sub">{[g.municipality, g.modes.map((m) => modeName(t, m)).join(', ')].filter(Boolean).join(' · ')}</span></span>
             </li>
           ))}
         </ul>

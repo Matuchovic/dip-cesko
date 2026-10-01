@@ -10,24 +10,27 @@ import { hydrateFavorites } from '@/lib/favorites';
 import { hydrateSettings, prefersReducedMotion, settingsStore } from '@/lib/settings';
 import { IconClock, IconMap, IconRoute, IconSearch, IconSettings, IconStar, IconTicket } from './icons';
 import { FreshnessPill } from './ui';
+import { useT } from '@/i18n';
+import type { MessageKey } from '@/i18n/messages';
 import MapChrome from './MapChrome';
 import VehicleDetail from './VehicleDetail';
 import StopCard from './StopCard';
 
 const MapView = dynamic(() => import('./MapView'), { ssr: false, loading: () => <div className="map-canvas" aria-hidden /> });
 
-const NAV = [
-  { href: '/', label: 'Mapa', Icon: IconMap },
-  { href: '/spojeni', label: 'Spojení', Icon: IconRoute },
-  { href: '/odjezdy', label: 'Odjezdy', Icon: IconClock },
-  { href: '/oblibene', label: 'Oblíbené', Icon: IconStar },
-  { href: '/jizdenky', label: 'Jízdenky', Icon: IconTicket },
+const NAV: { href: string; label: MessageKey; Icon: typeof IconMap }[] = [
+  { href: '/', label: 'nav_map', Icon: IconMap },
+  { href: '/spojeni', label: 'nav_plan', Icon: IconRoute },
+  { href: '/odjezdy', label: 'nav_departures', Icon: IconClock },
+  { href: '/oblibene', label: 'nav_favorites', Icon: IconStar },
+  { href: '/jizdenky', label: 'nav_tickets', Icon: IconTicket },
 ];
 
 const PEEK = 196;
 
 export default function AppShell({ children, styleUrl, demo }: { children: ReactNode; styleUrl: string; demo: boolean }) {
   const pathname = usePathname();
+  const t = useT();
   const isMapRoute = pathname === '/' || pathname.startsWith('/test/');
   const mobile = useMediaQuery('(max-width: 899px)');
   const selected = useStore(appStore, (s) => s.selected);
@@ -88,35 +91,35 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
 
   return (
     <div className="app" style={{ '--sheet-h': `${sheetH}px`, '--sheet-peek': `${sheetMode ? Math.min(sheetH, 260) : 0}px` } as React.CSSProperties}>
-      <a className="skip-link" href="#main">Přeskočit na obsah</a>
+      <a className="skip-link" href="#main">{t('skip')}</a>
       <header className="topbar">
-        <Link href="/" className="brand" aria-label="Doprava – Celé Česko, mapa">
+        <Link href="/" className="brand" aria-label={t('brandAria')}>
           <span className="brand-mark"><IconMap size={20} /></span>
-          <span className="brand-name">Doprava<small>Celé Česko</small></span>
+          <span className="brand-name">{t('appName')}<small>{t('appTagline')}</small></span>
         </Link>
-        <nav className="nav" aria-label="Hlavní navigace">
-          {NAV.map(({ href, label, Icon }) => <Link key={href} href={href} aria-current={pathname === href ? 'page' : undefined}><Icon size={18} />{label}</Link>)}
+        <nav className="nav" aria-label={t('navMain')}>
+          {NAV.map(({ href, label, Icon }) => <Link key={href} href={href} aria-current={pathname === href ? 'page' : undefined}><Icon size={18} />{t(label)}</Link>)}
         </nav>
         <div className="topbar-right">
           <FreshnessPill meta={meta} error={feedError} offline={offline} now={now} />
-          <Link href="/nastaveni" className="icon-btn" aria-label="Nastavení" aria-current={pathname === '/nastaveni' ? 'page' : undefined}><IconSettings size={20} /></Link>
+          <Link href="/nastaveni" className="icon-btn" aria-label={t('nav_settings')} aria-current={pathname === '/nastaveni' ? 'page' : undefined}><IconSettings size={20} /></Link>
         </div>
       </header>
 
-      <div className="map-layer" role="region" aria-label="Mapa dopravy">
+      <div className="map-layer" role="region" aria-label={t('mapRegion')}>
         <MapView styleUrl={styleUrl} demo={demo} />
       </div>
       <MapChrome mobile={mobile} />
 
       <div className="m-header">
-        <Link href="/odjezdy" className="m-search"><IconSearch size={20} />Kam chcete jet?</Link>
-        <Link href="/nastaveni" className="icon-btn" aria-label="Nastavení" style={{ width: 48, height: 48, boxShadow: 'var(--shadow-md)' }}><IconSettings size={20} /></Link>
+        <Link href="/odjezdy" className="m-search"><IconSearch size={20} />{t('searchPrompt')}</Link>
+        <Link href="/nastaveni" className="icon-btn" aria-label={t('nav_settings')} style={{ width: 48, height: 48, boxShadow: 'var(--shadow-md)' }}><IconSettings size={20} /></Link>
       </div>
 
-      <main id="main" ref={sheetRef} className={`panel ${sheetMode ? 'sheet-host' : 'page-host'}`} aria-label={isMapRoute ? 'Panel mapy' : 'Obsah'} tabIndex={-1}
+      <main id="main" ref={sheetRef} className={`panel ${sheetMode ? 'sheet-host' : 'page-host'}`} aria-label={isMapRoute ? t('panelMap') : t('panelContent')} tabIndex={-1}
         onFocus={(e) => { if (sheetMode && (e.target as HTMLElement).tagName === 'INPUT') setSheetH(Math.round(window.innerHeight - 150)); }}>
         {sheetMode && (
-          <button type="button" className="sheet-handle" aria-label={sheetH > PEEK + 10 ? 'Sbalit panel' : 'Rozbalit panel'} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
+          <button type="button" className="sheet-handle" aria-label={sheetH > PEEK + 10 ? t('sheetCollapse') : t('sheetExpand')} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
             <span />
           </button>
         )}
@@ -124,13 +127,13 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
       </main>
 
       {!mobile && isMapRoute && (selected || stop) && (
-        <section className="floating-card desktop-only" aria-label={selected ? 'Detail vozidla' : 'Detail zastávky'}>
+        <section className="floating-card desktop-only" aria-label={selected ? t('vehicleDetail') : t('stopDetail')}>
           <div style={{ padding: 'var(--s4)' }}>{selected ? <VehicleDetail /> : <StopCard />}</div>
         </section>
       )}
 
-      <nav className="tabbar" aria-label="Hlavní navigace">
-        {NAV.map(({ href, label, Icon }) => <Link key={href} href={href} aria-current={pathname === href ? 'page' : undefined}><Icon size={22} />{label}</Link>)}
+      <nav className="tabbar" aria-label={t('navMain')}>
+        {NAV.map(({ href, label, Icon }) => <Link key={href} href={href} aria-current={pathname === href ? 'page' : undefined}><Icon size={22} />{t(label)}</Link>)}
       </nav>
       <div className="sr-only" aria-live="polite" role="status">{announce}</div>
     </div>

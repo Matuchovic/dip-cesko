@@ -115,6 +115,17 @@ async function main() {
       await writeFile(path.join(OUT, out), buf);
       await preview(buf, s.id);
       const joints = detectJoints(a);
+      // Tuhé části pro kloubové projíždění oblouků: dělí se uprostřed kloubů / přechodů mezi vozy.
+      const cuts = [0, ...joints.map((j) => +((j.from + j.to) / 2).toFixed(4)), 1];
+      const pieces = [];
+      for (let i = 0; i < cuts.length - 1; i++) {
+        const top = Math.max(0, Math.round(cuts[i] * m.height) - (i ? 1 : 0));
+        const bottom = Math.min(m.height, Math.round(cuts[i + 1] * m.height) + (i < cuts.length - 2 ? 1 : 0));
+        const pbuf = await sharp(buf).extract({ left: 0, top, width: m.width, height: bottom - top }).png({ compressionLevel: 9 }).toBuffer();
+        const pfile = `${s.id}.map.p${i}.png`;
+        await writeFile(path.join(OUT, pfile), pbuf);
+        pieces.push({ index: i, file: `/vehicles/${pfile}`, fromFront: cuts[i], toFront: cuts[i + 1], width: m.width, height: bottom - top, pixelRatio: 2 });
+      }
       const lengthM = +(s.widthM * a.rect.height / a.rect.width).toFixed(1);
       Object.assign(entry, {
         frontDirectionDeg: s.declaredFront,
@@ -122,6 +133,7 @@ async function main() {
         variants: [{ purpose: 'map', file: `/vehicles/${out}`, width: m.width, height: m.height, pixelRatio: 2, bytes: buf.length }],
         physical: { lengthM, widthM: s.widthM, origin: `odvozeno z poměru stran viditelné oblasti PNG (${a.rect.width}×${a.rect.height} px) při ${s.widthOrigin}; skutečná délka konkrétních vozů se liší` },
         segments: segmentsFrom(joints),
+        pieces,
         sizing: { spriteFromZoom: 15.5, minScreenLengthPx: 34, maxScreenLengthPx: 560 },
         fallback: 'marker',
       });

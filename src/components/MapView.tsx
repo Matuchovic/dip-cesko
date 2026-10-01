@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { appStore, latestVehicles, mapApi } from '@/lib/app-state';
 import { prefersReducedMotion, settingsStore } from '@/lib/settings';
 import type { MapSettings } from '@/map/controller';
+import { useI18n } from '@/i18n';
 
 
 function webglAvailable(): boolean {
@@ -19,6 +20,9 @@ export default function MapView({ styleUrl, demo }: { styleUrl: string; demo: bo
   const el = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const rotation = demo && pathname.startsWith('/test/rotace');
+  const { locale, t } = useI18n();
+  const lang = useRef({ locale, t });
+  useEffect(() => { lang.current = { locale, t }; mapApi.controller?.setLanguage(locale); }, [locale, t]);
 
   useEffect(() => {
     let disposed = false;
@@ -45,13 +49,14 @@ export default function MapView({ styleUrl, demo }: { styleUrl: string; demo: bo
         } catch { controller = null; }
       }
       if (!controller) appStore.set({ mapFailed: true });
+      controller?.setLanguage(lang.current.locale);
       mapApi.controller = controller;
 
       const feed = new VehicleFeed({
         onData: (env, receivedAt, fromCache) => {
           latestVehicles.list = env.data;
           controller?.ingest(env.data, receivedAt);
-          appStore.set({ feedMeta: env.meta, feedError: fromCache ? 'Jste offline. Zobrazujeme naposledy uložená data.' : null, feedOffline: fromCache, feedReceivedAt: receivedAt, feedCount: env.data.length });
+          appStore.set({ feedMeta: env.meta, feedError: fromCache ? lang.current.t('pill_offline') : null, feedOffline: fromCache, feedReceivedAt: receivedAt, feedCount: env.data.length });
         },
         onError: (message, offline) => appStore.set({ feedError: message, feedOffline: offline }),
       }, 10_000, rotation ? '?scenario=rotation' : '');

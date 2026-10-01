@@ -1,5 +1,6 @@
 'use client';
 import { createStore } from './store';
+import { isLocale, type Locale } from '@/i18n/locales';
 
 export interface Settings {
   theme: 'system' | 'light' | 'dark';
@@ -7,9 +8,10 @@ export interface Settings {
   vehicleStyle: 'sprites' | 'markers';
   buildings3d: boolean;
   showStops: boolean;
+  language: 'auto' | Locale;
 }
 const KEY = 'doprava.settings.v1';
-export const DEFAULT_SETTINGS: Settings = { theme: 'system', motion: 'system', vehicleStyle: 'sprites', buildings3d: true, showStops: true };
+export const DEFAULT_SETTINGS: Settings = { theme: 'light', motion: 'system', vehicleStyle: 'sprites', buildings3d: true, showStops: true, language: 'auto' };
 
 function load(): Settings {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS;
@@ -21,6 +23,7 @@ function load(): Settings {
       vehicleStyle: raw.vehicleStyle === 'markers' ? 'markers' : 'sprites',
       buildings3d: raw.buildings3d !== false,
       showStops: raw.showStops !== false,
+      language: isLocale(raw.language) ? raw.language : 'auto',
     };
   } catch { return DEFAULT_SETTINGS; }
 }

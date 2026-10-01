@@ -1,13 +1,15 @@
 import { Map as MlMap, setWorkerUrl, type GeoJSONSource, type MapGeoJSONFeature, type ExpressionSpecification, type FilterSpecification, type LayerSpecification } from 'maplibre-gl';
-import type { Feature, FeatureCollection, Point } from 'geojson';
-import { spriteIconRotate } from '@/domain/angles';
+import type { Feature, FeatureCollection } from 'geojson';
 import { classifyPositionAge, type PositionFreshness } from '@/domain/freshness';
 import { MODES, type Mode, type StopPoint, type VehicleState } from '@/domain/model';
 import { MODE_COLOR } from '@/domain/modes';
 import { metersPerPixel } from '@/domain/geo';
-import { VehicleAnimator } from './animator';
-import { manifest, mapAssetFor, mapVariant, spriteSizeStops } from './assets';
+import { manifest, mapAssetFor, spriteSizeStops, type VehicleAsset } from './assets';
 import { badgeImage, clusterImage, stopLabelImage } from './images';
+import { TrackFollower } from './follower';
+import { TrackNetwork, type TrackKind } from './tracks';
+import { buildExtrusions, buildPieces, DEFAULT_SHAPES, type VehicleShape } from './vehicle3d';
+import { D2R, pointAlong, polyLength, type LngLat } from './geometry';
 
 export interface MapSettings { vehicleStyle: 'sprites' | 'markers'; buildings3d: boolean; showStops: boolean; reducedMotion: boolean }
 export interface CameraState { bearing: number; pitch: number; zoom: number; lng: number; lat: number }
@@ -22,27 +24,31 @@ export interface MapEvents {
   onRender(ok: boolean): void;
 }
 
-const LIVE = 'dop-live', OV = 'dop-overview', STOPS = 'dop-stops', ME = 'dop-me';
-const SPRITE_ZOOM = 15.5, LIVE_ZOOM = 12.5;
+const LIVE = 'dop-live', PIECES = 'dop-pieces', V3D = 'dop-3d', OV = 'dop-overview', STOPS = 'dop-stops', ME = 'dop-me';
+const SPRITE_ZOOM = 15.5, LIVE_ZOOM = 12.5, MODEL_ZOOM = 15, PITCH_3D = 20, DETAIL_3D_MAX = 90;
 const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
 export const FALLBACK_STYLE_URL = '/map/offline-style.json';
 /** Worker MapLibre servírovaný z /public (viz scripts/copy-maplibre-worker.mjs). */
 const WORKER_URL = '/maplibre/maplibre-gl-worker.mjs';
 const PRAGUE: [number, number] = [14.4205, 50.0815];
+const ROAD_CLASSES = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'minor', 'service', 'busway', 'bus_guideway']);
+const RAIL_SUBCLASSES = new Set(['rail', 'light_rail', 'narrow_gauge', 'preserved', 'funicular']);
 
 const modeColor = ['match', ['get', 'mode'], ...MODES.flatMap((m) => [m, MODE_COLOR[m]]), MODE_COLOR.other] as unknown as ExpressionSpecification;
 const freshOpacity: ExpressionSpecification = ['match', ['get', 'fresh'], 'live', 1, 0.5];
 const safe = (s: string) => s.replace(/\|/g, '/').slice(0, 8);
+const HAS_3D = new Set<Mode>(['tram', 'train', 'bus', 'trolleybus', 'ferry']);
 
 export class MapController {
   readonly map: MlMap;
-  private animator = new VehicleAnimator();
+  private follower: TrackFollower;
   private vehicles = new Map<string, VehicleState>();
   private modes = new Set<Mode>(MODES);
   private selectedId: string | null = null;
   private follow = false;
   private raf = 0;
   private lastPush = 0;
+  private last3d = 0;
   private lastSelEmit = 0;
   private ready = false;
   private destroyed = false;
@@ -53,12 +59,18 @@ export class MapController {
   private readonly coarse = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
   private me: { lng: number; lat: number; acc: number } | null = null;
   private viewAngles = { bearing: 0, pitch: 0 };
+  private pitchedMode = false;
+  private lang = 'cs';
+  private nets = new Map<TrackKind, { net: TrackNetwork | null; at: number; version: number }>();
+  private netVersion = 0;
+  private transport: { id: string; layer?: string } | null | undefined;
 
   constructor(container: HTMLElement, private styleUrl: string, private settings: MapSettings, private events: MapEvents) {
-    this.animator.setReducedMotion(settings.reducedMotion);
+    this.follower = new TrackFollower((mode) => this.lengthFor(mode));
+    this.follower.animator.setReducedMotion(settings.reducedMotion);
     setWorkerUrl(WORKER_URL);
     this.map = new MlMap({
-      container, style: styleUrl, center: PRAGUE, zoom: 13.2, pitch: 0, bearing: 0, maxZoom: 20.5, minZoom: 6,
+      container, style: styleUrl, center: PRAGUE, zoom: 13.2, pitch: 0, bearing: 0, maxZoom: 20.5, minZoom: 6, maxPitch: 70,
       maxBounds: [[11.2, 48.1], [19.6, 51.6]], attributionControl: { compact: true }, dragRotate: true, pitchWithRotate: true,
       cooperativeGestures: false, fadeDuration: 150,
     });
@@ -66,30 +78,35 @@ export class MapController {
     this.map.on('error', (e) => { if (!this.ready && !this.usedFallback && /style|fetch|load/i.test(String(e.error?.message ?? ''))) this.useFallbackStyle(); });
     this.loadTimer = setTimeout(() => { if (!this.ready) this.useFallbackStyle(); }, 12_000);
     this.map.on('styleimagemissing', (e) => this.provideImage(e.id));
-    this.map.on('click', (e) => this.handleClick(e.point.x, e.point.y));
+    this.map.on('click', (e) => void this.handleClick(e.point.x, e.point.y));
     this.map.on('mousemove', (e) => this.hover(e.point.x, e.point.y));
     this.map.on('move', () => { this.emitCamera(); this.onViewChange(); });
-    this.map.on('moveend', () => { this.scheduleStops(); this.lastPush = 0; this.kick(); });
+    this.map.on('moveend', () => { this.netVersion++; this.scheduleStops(); this.lastPush = 0; this.resnapVisible(); this.kick(); });
+    this.map.on('sourcedata', (e) => { if (e.isSourceLoaded && e.sourceId !== LIVE && e.sourceId !== PIECES && e.sourceId !== V3D) this.netVersion++; });
     this.map.on('dragstart', () => this.setFollow(false));
     this.map.on('webglcontextlost', () => this.events.onRender(false));
     this.map.on('webglcontextrestored', () => { this.events.onRender(true); this.lastPush = 0; this.kick(); });
   }
 
+  // ---------- styl a vrstvy ----------
   private useFallbackStyle() {
     if (this.usedFallback || this.destroyed || this.styleUrl === FALLBACK_STYLE_URL) return;
     this.usedFallback = true;
     this.events.onBasemap('fallback');
     this.map.setStyle(FALLBACK_STYLE_URL);
-    this.map.once('style.load', () => this.onStyleLoad());
+    this.map.once('style.load', () => void this.onStyleLoad());
   }
 
   private async onStyleLoad() {
     if (this.destroyed) return;
     if (this.loadTimer) clearTimeout(this.loadTimer);
+    this.transport = undefined;
     await this.addVehicleImages();
     this.addLayers();
     this.applyBuildings();
+    this.applyLabels();
     this.ready = true;
+    this.applyPitchMode(true);
     if (!this.usedFallback) this.events.onBasemap('ok');
     this.events.onReady();
     this.pushOverview();
@@ -100,30 +117,30 @@ export class MapController {
 
   private async addVehicleImages() {
     for (const a of manifest.assets) {
-      const v = mapVariant(a);
-      if (a.view !== 'top-down' || !v || this.map.hasImage(a.id)) continue;
-      try { const img = await this.map.loadImage(v.file); if (!this.map.hasImage(a.id)) this.map.addImage(a.id, img.data, { pixelRatio: v.pixelRatio }); } catch { /* chybějící asset → náhradní značka */ }
+      if (a.view !== 'top-down') continue;
+      for (const pc of a.pieces ?? []) {
+        const id = `${a.id}#${pc.index}`;
+        if (this.map.hasImage(id)) continue;
+        try { const img = await this.map.loadImage(pc.file); if (!this.map.hasImage(id)) this.map.addImage(id, img.data, { pixelRatio: pc.pixelRatio }); } catch { /* chybějící část → náhradní značka */ }
+      }
     }
   }
 
   private spriteSizeExpr(): ExpressionSpecification {
     const lat = this.map.getCenter().lat;
     const tram = mapAssetFor('tram'), train = mapAssetFor('train');
-    const stopsFor = (id: string | undefined) => (id ? spriteSizeStops(manifest.assets.find((a) => a.id === id)!, lat) : []);
-    const zs = stopsFor(tram?.id).map(([z]) => z);
-    if (!zs.length) return ['literal', 0.5] as unknown as ExpressionSpecification;
-    const tr = stopsFor(tram?.id), tn = stopsFor(train?.id);
+    const tr = tram ? spriteSizeStops(tram, lat) : [], tn = train ? spriteSizeStops(train, lat) : [];
+    if (!tr.length) return ['literal', 0.5] as unknown as ExpressionSpecification;
     const parts: unknown[] = ['interpolate', ['linear'], ['zoom']];
-    zs.forEach((z, i) => parts.push(z, ['match', ['get', 'icon'], ...(train ? [train.id, tn[i]?.[1] ?? 0.5] : []), tr[i]?.[1] ?? 0.5]));
+    tr.forEach(([z, size], i) => parts.push(z, ['match', ['get', 'asset'], ...(train ? [train.id, tn[i]?.[1] ?? size] : []), size]));
     return parts as ExpressionSpecification;
   }
 
   private addLayers() {
     const m = this.map;
-    if (!m.getSource(STOPS)) m.addSource(STOPS, { type: 'geojson', data: EMPTY });
-    if (!m.getSource(OV)) m.addSource(OV, { type: 'geojson', data: EMPTY, cluster: true, clusterMaxZoom: 12, clusterRadius: 46 });
-    if (!m.getSource(LIVE)) m.addSource(LIVE, { type: 'geojson', data: EMPTY });
-    if (!m.getSource(ME)) m.addSource(ME, { type: 'geojson', data: EMPTY });
+    for (const [id, cluster] of [[STOPS, false], [OV, true], [LIVE, false], [PIECES, false], [V3D, false], [ME, false]] as const) {
+      if (!m.getSource(id)) m.addSource(id, cluster ? { type: 'geojson', data: EMPTY, cluster: true, clusterMaxZoom: 12, clusterRadius: 46 } : { type: 'geojson', data: EMPTY });
+    }
     const layers: LayerSpecification[] = [
       { id: 'dop-stops-dot', type: 'circle', source: STOPS, minzoom: 14.5, layout: { visibility: this.settings.showStops ? 'visible' : 'none' },
         paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 14.5, 3, 18, 6.5], 'circle-color': '#FFFFFF', 'circle-stroke-color': modeColor, 'circle-stroke-width': 2.2, 'circle-pitch-alignment': 'map' } },
@@ -134,15 +151,17 @@ export class MapController {
         paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 2.5, 12.5, 5], 'circle-color': modeColor, 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 1.2, 'circle-opacity': freshOpacity, 'circle-stroke-opacity': freshOpacity } },
       { id: 'dop-ov-cluster', type: 'symbol', source: OV, maxzoom: LIVE_ZOOM, filter: ['has', 'point_count'], layout: { 'icon-image': ['concat', 'c|', ['to-string', ['get', 'point_count']]], 'icon-allow-overlap': true } },
       { id: 'dop-halo', type: 'circle', source: LIVE, minzoom: LIVE_ZOOM, filter: ['==', ['get', 'id'], ''],
-        paint: { 'circle-radius': ['interpolate', ['exponential', 2], ['zoom'], 12.5, 14, 16, 26, 19, 110, 21, 380], 'circle-color': '#7B4DFF', 'circle-opacity': 0.16, 'circle-stroke-color': '#7B4DFF', 'circle-stroke-width': 2, 'circle-stroke-opacity': 0.6, 'circle-pitch-alignment': 'map' } },
+        paint: { 'circle-radius': ['interpolate', ['exponential', 2], ['zoom'], 12.5, 14, 16, 26, 19, 110, 21, 380], 'circle-color': '#7B4DFF', 'circle-opacity': 0.14, 'circle-stroke-color': '#7B4DFF', 'circle-stroke-width': 2, 'circle-stroke-opacity': 0.55, 'circle-pitch-alignment': 'map' } },
       { id: 'dop-dot', type: 'circle', source: LIVE, minzoom: LIVE_ZOOM, maxzoom: SPRITE_ZOOM,
         paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 12.5, 5, 15.5, 7.5], 'circle-color': modeColor, 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 1.6, 'circle-opacity': freshOpacity, 'circle-stroke-opacity': freshOpacity } },
       { id: 'dop-marker', type: 'circle', source: LIVE, minzoom: SPRITE_ZOOM, filter: ['==', ['get', 'sprite'], false],
         paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 15.5, 8, 19, 12], 'circle-color': modeColor, 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 2.5, 'circle-opacity': freshOpacity, 'circle-pitch-alignment': 'map' } },
-      { id: 'dop-sprite', type: 'symbol', source: LIVE, minzoom: SPRITE_ZOOM, filter: ['==', ['get', 'sprite'], true],
+      { id: 'dop-pieces', type: 'symbol', source: PIECES, minzoom: SPRITE_ZOOM,
         layout: { 'icon-image': ['get', 'icon'], 'icon-size': this.spriteSizeExpr(), 'icon-rotate': ['get', 'rot'], 'icon-rotation-alignment': 'map', 'icon-pitch-alignment': 'map',
           'icon-allow-overlap': true, 'icon-ignore-placement': true, 'icon-anchor': 'center', 'symbol-sort-key': ['get', 'sort'] },
         paint: { 'icon-opacity': freshOpacity } },
+      { id: 'dop-3d', type: 'fill-extrusion', source: V3D, minzoom: MODEL_ZOOM, layout: { visibility: 'none' },
+        paint: { 'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 1, 'fill-extrusion-vertical-gradient': true } },
       { id: 'dop-badge', type: 'symbol', source: LIVE, minzoom: 13.5,
         layout: { 'icon-image': ['get', 'badge'], 'icon-anchor': 'bottom', 'icon-offset': ['get', 'off'], 'icon-allow-overlap': true, 'icon-ignore-placement': true,
           'icon-rotation-alignment': 'viewport', 'icon-pitch-alignment': 'viewport', 'symbol-sort-key': ['get', 'sort'] } },
@@ -161,13 +180,86 @@ export class MapController {
     } catch { /* obrázek se nepodařilo vytvořit – vrstva zůstane bez štítku */ }
   }
 
+  /** Popisky podkladové mapy v jazyce aplikace (OpenMapTiles name:xx, jinak místní název). */
+  setLanguage(lang: string) { this.lang = lang; if (this.ready) this.applyLabels(); }
+
+  private applyLabels() {
+    const field = (this.lang === 'ar'
+      ? ['coalesce', ['get', 'name:en'], ['get', 'name:latin'], ['get', 'name']]
+      : ['coalesce', ['get', `name:${this.lang}`], ['get', 'name:latin'], ['get', 'name']]) as unknown as ExpressionSpecification;
+    for (const l of this.map.getStyle().layers ?? []) {
+      if (l.type !== 'symbol' || l.id.startsWith('dop-')) continue;
+      const tf = this.map.getLayoutProperty(l.id, 'text-field');
+      if (!tf) continue;
+      const js = JSON.stringify(tf);
+      if (!/name/.test(js) || /ref|housenumber|ele/.test(js)) continue;
+      try { this.map.setLayoutProperty(l.id, 'text-field', field); } catch { /* vrstva bez textu */ }
+    }
+  }
+
+  // ---------- trať z mapových dat ----------
+  private transportSource(): { id: string; layer?: string } | null {
+    if (this.transport !== undefined) return this.transport;
+    const layer = (this.map.getStyle().layers ?? []).find((l) => 'source-layer' in l && l['source-layer'] === 'transportation' && 'source' in l);
+    this.transport = layer && 'source' in layer && typeof layer.source === 'string' ? { id: layer.source, layer: 'transportation' } : this.map.getSource('demo-tracks') ? { id: 'demo-tracks' } : null;
+    return this.transport;
+  }
+
+  private getNet = (kind: TrackKind): TrackNetwork | null => {
+    if (!this.ready || this.map.getZoom() < 13) return null;
+    const c = this.nets.get(kind), now = Date.now();
+    if (c && (c.version === this.netVersion || now - c.at < 1500)) return c.net;
+    const net = this.buildNet(kind);
+    this.nets.set(kind, { net, at: now, version: this.netVersion });
+    return net;
+  };
+
+  private buildNet(kind: TrackKind): TrackNetwork | null {
+    const src = this.transportSource();
+    if (!src) return null;
+    let feats: ReturnType<MlMap['querySourceFeatures']>;
+    try { feats = this.map.querySourceFeatures(src.id, src.layer ? { sourceLayer: src.layer } : undefined); } catch { return null; }
+    const lines: LngLat[][] = [];
+    for (const f of feats) {
+      const p = f.properties ?? {};
+      const sub = String(p.subclass ?? ''), cls = String(p.class ?? '');
+      const ok = kind === 'tram' ? sub === 'tram' : kind === 'rail' ? RAIL_SUBCLASSES.has(sub) || (cls === 'rail' && !sub) : ROAD_CLASSES.has(cls);
+      if (!ok) continue;
+      const g = f.geometry;
+      if (g.type === 'LineString') lines.push(g.coordinates.map((c) => ({ lng: c[0]!, lat: c[1]! })));
+      else if (g.type === 'MultiLineString') for (const part of g.coordinates) lines.push(part.map((c) => ({ lng: c[0]!, lat: c[1]! })));
+    }
+    return lines.length ? new TrackNetwork(lines, this.map.getCenter().lat) : null;
+  }
+
+  private resnapVisible() {
+    if (!this.ready || this.map.getZoom() < 13) return;
+    this.follower.resnap(Date.now(), this.getNet);
+  }
+
+  private lengthFor(mode: Mode): number {
+    const a = mapAssetFor(mode);
+    return a?.physical?.lengthM ?? DEFAULT_SHAPES[mode].lengthM;
+  }
+
+  private shapeFor(v: VehicleState, asset: VehicleAsset | null, stale: boolean, sel: boolean, detail: boolean): VehicleShape {
+    const d = DEFAULT_SHAPES[v.route.mode];
+    return {
+      id: v.id, mode: v.route.mode, lengthM: asset?.physical?.lengthM ?? d.lengthM, widthM: asset?.physical?.widthM ?? d.widthM,
+      pieces: asset?.pieces?.map((p) => ({ fromFront: p.fromFront, toFront: p.toFront })) ?? d.pieces,
+      bidirectional: v.route.mode === 'train' ? true : d.bidirectional, stale, selected: sel, detail,
+    };
+  }
+
+  // ---------- data a vykreslení ----------
   /** Nová dávka dat ze serveru: oddělená od animace, React se nepřekresluje. */
   ingest(list: VehicleState[], receivedAt: number) {
     this.vehicles = new Map(list.map((v) => [v.id, v]));
-    this.animator.ingest(list, receivedAt, Date.now());
+    this.follower.update(list, receivedAt, Date.now(), this.getNet);
     if (this.selectedId && !this.vehicles.has(this.selectedId)) { this.selectedId = null; this.applySelectionFilter(); this.setFollow(false); this.events.onSelect(null, 'expired'); }
     this.pushOverview();
     this.emitSelected();
+    this.lastPush = 0;
     this.kick();
   }
 
@@ -189,12 +281,6 @@ export class MapController {
     return classifyPositionAge(Number.isFinite(t) ? (now - t) / 1000 : null);
   }
 
-  /** Při otáčení a naklápění mapy se přepočítá posun štítků (vozidla samotná natáčí MapLibre). */
-  private onViewChange() {
-    const b = this.map.getBearing(), p = this.map.getPitch();
-    if (Math.abs(b - this.viewAngles.bearing) > 1 || Math.abs(p - this.viewAngles.pitch) > 1) { this.viewAngles = { bearing: b, pitch: p }; this.kick(); }
-  }
-
   private kick() { if (!this.raf && !this.destroyed) this.raf = requestAnimationFrame(this.frame); }
 
   private frame = () => {
@@ -202,7 +288,7 @@ export class MapController {
     if (!this.ready || this.destroyed) return;
     const now = Date.now();
     const z = this.map.getZoom();
-    const animating = this.animator.isAnimating(now);
+    const animating = this.follower.animator.isAnimating(now);
     const minGap = this.settings.reducedMotion ? 1000 : 33;
     if (z >= LIVE_ZOOM - 0.3 && now - this.lastPush >= minGap) { this.pushLive(now); this.lastPush = now; }
     if (this.follow && this.selectedId) this.followStep(now);
@@ -212,44 +298,60 @@ export class MapController {
 
   private pushLive(now: number) {
     const b = this.map.getBounds();
-    const zoom = this.map.getZoom(), mapBearing = this.map.getBearing();
-    const mpp = metersPerPixel(this.map.getCenter().lat, zoom);
-    const pitchK = Math.cos((this.map.getPitch() * Math.PI) / 180);
     const padLng = (b.getEast() - b.getWest()) * 0.25, padLat = (b.getNorth() - b.getSouth()) * 0.25;
-    const features: Feature[] = [];
+    const zoom = this.map.getZoom(), mapBearing = this.map.getBearing(), pitch = this.map.getPitch();
+    const mpp = metersPerPixel(this.map.getCenter().lat, zoom);
+    const pitchK = Math.cos(pitch * D2R);
+    const want3d = this.pitchedMode && zoom >= MODEL_ZOOM && now - this.last3d >= (this.settings.reducedMotion ? 1000 : 90);
+    const center = this.map.getCenter();
+    const live: Feature[] = [], pieces: Feature[] = [], solids: Feature[] = [];
+    const visible: { id: string; d: number }[] = [];
     for (const [id, v] of this.vehicles) {
       if (!this.modes.has(v.route.mode)) continue;
-      const d = this.animator.sample(id, now);
-      if (!d) continue;
-      if (d.lng < b.getWest() - padLng || d.lng > b.getEast() + padLng || d.lat < b.getSouth() - padLat || d.lat > b.getNorth() + padLat) continue;
-      const fresh = this.freshness(v, now);
-      if (fresh === 'expired' && id !== this.selectedId) continue;
-      const asset = this.settings.vehicleStyle === 'sprites' ? mapAssetFor(v.route.mode) : null;
-      const sprite = Boolean(asset && d.bearing !== null && this.map.hasImage(asset.id));
-      const sel = id === this.selectedId;
-      const state = sel ? 'selected' : fresh === 'live' ? 'live' : 'stale';
-      // Štítek nad vozidlem: posun = půl promítnuté délky/šířky podle úhlu na obrazovce, aby nezakrýval čelo.
-      let off = zoom < SPRITE_ZOOM ? 9 : 15;
-      if (sprite && asset?.physical && asset.sizing) {
-        const len = Math.min(asset.sizing.maxScreenLengthPx, Math.max(asset.sizing.minScreenLengthPx, asset.physical.lengthM / mpp));
-        const wid = (len * asset.physical.widthM) / asset.physical.lengthM;
-        const th = (((d.bearing as number) - mapBearing) * Math.PI) / 180;
-        off = (Math.abs(Math.cos(th)) * len * pitchK + Math.abs(Math.sin(th)) * wid) / 2 + 7;
-      }
-      features.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [d.lng, d.lat] }, properties: {
-        id, mode: v.route.mode, sprite, icon: asset?.id ?? '', rot: sprite ? spriteIconRotate(d.bearing as number, asset?.frontDirectionDeg ?? 0) : 0,
-        fresh: fresh === 'live' ? 'live' : 'stale', badge: `b|${v.route.mode}|${safe(v.route.shortName)}|${state}`, sort: sel ? 1000 : fresh === 'live' ? 10 : 1, off: [0, -Math.round(off)],
-      } });
+      if (v.lon < b.getWest() - padLng || v.lon > b.getEast() + padLng || v.lat < b.getSouth() - padLat || v.lat > b.getNorth() + padLat) continue;
+      visible.push({ id, d: (v.lon - center.lng) ** 2 + (v.lat - center.lat) ** 2 });
     }
-    (this.map.getSource(LIVE) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features });
+    visible.sort((a, c) => a.d - c.d);
+    visible.forEach(({ id }, rank) => {
+      const v = this.vehicles.get(id)!;
+      const s = this.follower.sample(id, now);
+      if (!s) return;
+      const fresh = this.freshness(v, now);
+      if (fresh === 'expired' && id !== this.selectedId) return;
+      const sel = id === this.selectedId;
+      const stale = fresh !== 'live';
+      const asset = this.settings.vehicleStyle === 'sprites' ? mapAssetFor(v.route.mode) : null;
+      const len = polyLength(s.body);
+      const mid = s.body.length >= 2 && len > 0.5 ? pointAlong(s.body, len / 2).p : s.front;
+      const hasBody = s.bearing !== null && len > 0.5;
+      const sprite = Boolean(asset && hasBody && asset.pieces?.length && this.map.hasImage(`${asset.id}#0`));
+      const shape = this.shapeFor(v, asset, stale, sel, rank < DETAIL_3D_MAX);
+      const state = sel ? 'selected' : stale ? 'stale' : 'live';
+      let off = zoom < SPRITE_ZOOM ? 9 : 15;
+      if (hasBody && zoom >= SPRITE_ZOOM) {
+        const lenPx = shape.lengthM / mpp, widPx = shape.widthM / mpp;
+        const th = ((s.bearing as number) - mapBearing) * D2R;
+        off = (Math.abs(Math.cos(th)) * lenPx * pitchK + Math.abs(Math.sin(th)) * widPx) / 2 + 7 + (this.pitchedMode ? (3.6 / mpp) * Math.sin(pitch * D2R) : 0);
+        off = Math.min(off, 320);
+      }
+      live.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [mid.lng, mid.lat] }, properties: {
+        id, mode: v.route.mode, sprite, has3d: HAS_3D.has(v.route.mode) && hasBody, fresh: stale ? 'stale' : 'live',
+        badge: `b|${v.route.mode}|${safe(v.route.shortName)}|${state}`, sort: sel ? 1000 : stale ? 1 : 10, off: [0, -Math.round(off)],
+      } });
+      if (sprite && asset && !this.pitchedMode && zoom >= SPRITE_ZOOM) pieces.push(...buildPieces(s.body, shape, asset.id, { fresh: stale ? 'stale' : 'live', sort: sel ? 1000 : 10 }));
+      if (want3d && hasBody && HAS_3D.has(v.route.mode)) solids.push(...buildExtrusions(s.body, shape));
+    });
+    (this.map.getSource(LIVE) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: live });
+    if (!this.pitchedMode || zoom < SPRITE_ZOOM) (this.map.getSource(PIECES) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: pieces });
+    if (want3d) { (this.map.getSource(V3D) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: solids }); this.last3d = now; }
   }
 
   private followStep(now: number) {
-    const d = this.selectedId ? this.animator.sample(this.selectedId, now) : null;
-    if (!d) return;
+    const s = this.selectedId ? this.follower.sample(this.selectedId, now) : null;
+    if (!s) return;
     const c = this.map.getCenter();
     const k = this.settings.reducedMotion ? 1 : 0.12;
-    this.map.jumpTo({ center: [c.lng + (d.lng - c.lng) * k, c.lat + (d.lat - c.lat) * k] });
+    this.map.jumpTo({ center: [c.lng + (s.front.lng - c.lng) * k, c.lat + (s.front.lat - c.lat) * k] });
   }
 
   private emitSelected() {
@@ -264,6 +366,24 @@ export class MapController {
     this.events.onCamera({ bearing: this.map.getBearing(), pitch: this.map.getPitch(), zoom: this.map.getZoom(), lng: c.lng, lat: c.lat });
   }
 
+  /** Při otáčení a naklápění se přepočítá posun štítků a přepne 2D sprity ↔ 3D vozidla. */
+  private onViewChange() {
+    const b = this.map.getBearing(), p = this.map.getPitch();
+    if (Math.abs(b - this.viewAngles.bearing) > 1 || Math.abs(p - this.viewAngles.pitch) > 1) { this.viewAngles = { bearing: b, pitch: p }; this.applyPitchMode(false); this.kick(); }
+  }
+
+  private applyPitchMode(force: boolean) {
+    if (!this.ready) return;
+    const pitched = this.map.getPitch() >= PITCH_3D;
+    if (pitched === this.pitchedMode && !force) return;
+    this.pitchedMode = pitched;
+    this.map.setLayoutProperty('dop-3d', 'visibility', pitched ? 'visible' : 'none');
+    this.map.setLayoutProperty('dop-pieces', 'visibility', pitched ? 'none' : 'visible');
+    this.map.setFilter('dop-marker', (pitched ? ['all', ['==', ['get', 'sprite'], false], ['==', ['get', 'has3d'], false]] : ['==', ['get', 'sprite'], false]) as FilterSpecification);
+    this.last3d = 0;
+    this.lastPush = 0;
+  }
+
   private applySelectionFilter() {
     if (this.map.getLayer('dop-halo')) this.map.setFilter('dop-halo', ['==', ['get', 'id'], this.selectedId ?? ''] as FilterSpecification);
   }
@@ -274,11 +394,13 @@ export class MapController {
     const v = id ? this.vehicles.get(id) ?? null : null;
     this.events.onSelect(v, v ? this.freshness(v, Date.now()) : 'unknown');
     if (v && opts.fly) {
-      const d = this.animator.sample(v.id, Date.now()) ?? { lng: v.lon, lat: v.lat };
-      this.map.easeTo({ center: [d.lng, d.lat], zoom: Math.max(this.map.getZoom(), 16.6), duration: this.settings.reducedMotion ? 0 : 900 });
+      const s = this.follower.sample(v.id, Date.now());
+      const p = s?.front ?? { lng: v.lon, lat: v.lat };
+      this.map.easeTo({ center: [p.lng, p.lat], zoom: Math.max(this.map.getZoom(), opts.follow ? 17.4 : 16.6), pitch: opts.follow ? Math.max(this.map.getPitch(), 55) : this.map.getPitch(), duration: this.settings.reducedMotion ? 0 : 1100 });
     }
     this.setFollow(Boolean(v && opts.follow));
     this.lastPush = 0;
+    this.last3d = 0;
     this.kick();
   }
 
@@ -291,14 +413,16 @@ export class MapController {
 
   private pick(x: number, y: number): MapGeoJSONFeature | null {
     const r = this.coarse ? 26 : 14;
-    const layers = ['dop-sprite', 'dop-marker', 'dop-dot', 'dop-badge', 'dop-ov-cluster', 'dop-ov-dot', 'dop-stops-dot'].filter((l) => this.map.getLayer(l));
+    const layers = ['dop-3d', 'dop-pieces', 'dop-marker', 'dop-dot', 'dop-badge', 'dop-ov-cluster', 'dop-ov-dot', 'dop-stops-dot'].filter((l) => this.map.getLayer(l));
     const feats = this.map.queryRenderedFeatures([[x - r, y - r], [x + r, y + r]], { layers });
     let best: MapGeoJSONFeature | null = null, bestD = Infinity;
     for (const f of feats) {
-      if (f.geometry.type !== 'Point') continue;
-      const p = this.map.project(f.geometry.coordinates as [number, number]);
+      let px: { x: number; y: number };
+      if (f.geometry.type === 'Point') px = this.map.project(f.geometry.coordinates as [number, number]);
+      else if (f.layer.id === 'dop-3d') px = { x, y };
+      else continue;
       const prio = f.layer.id.startsWith('dop-stops') ? 400 : f.layer.id === 'dop-ov-cluster' ? 200 : 0;
-      const dist = Math.hypot(p.x - x, p.y - y) + prio;
+      const dist = Math.hypot(px.x - x, px.y - y) + prio;
       if (dist < bestD) { bestD = dist; best = f; }
     }
     return best;
@@ -315,7 +439,7 @@ export class MapController {
     if (f.layer.id === 'dop-ov-cluster') {
       const src = this.map.getSource(OV) as GeoJSONSource;
       const zoom = await src.getClusterExpansionZoom(Number(f.properties?.cluster_id));
-      this.map.easeTo({ center: (f.geometry as Point).coordinates as [number, number], zoom: Math.min(zoom + 0.5, 17), duration: this.settings.reducedMotion ? 0 : 600 });
+      this.map.easeTo({ center: (f.geometry as unknown as { coordinates: [number, number] }).coordinates, zoom: Math.min(zoom + 0.5, 17), duration: this.settings.reducedMotion ? 0 : 600 });
       return;
     }
     if (f.layer.id === 'dop-stops-dot') {
@@ -323,7 +447,7 @@ export class MapController {
       if (typeof raw === 'string') { this.select(null); this.events.onStop(JSON.parse(raw) as StopPoint); }
       return;
     }
-    const id = String(f.properties?.id ?? '');
+    const id = String(f.properties?.vid ?? f.properties?.id ?? '');
     if (id) { this.events.onStop(null); this.select(id, { fly: f.layer.id === 'dop-ov-dot' }); }
   }
 
@@ -349,28 +473,28 @@ export class MapController {
     } catch { /* přerušeno nebo nedostupné */ }
   }
 
-  setModes(modes: Mode[]) { this.modes = new Set(modes); this.pushOverview(); this.lastPush = 0; this.kick(); }
+  setModes(modes: Mode[]) { this.modes = new Set(modes); this.pushOverview(); this.lastPush = 0; this.last3d = 0; this.kick(); }
 
   setSettings(s: MapSettings) {
     const prev = this.settings;
     this.settings = s;
-    this.animator.setReducedMotion(s.reducedMotion);
+    this.follower.animator.setReducedMotion(s.reducedMotion);
     if (!this.ready) return;
     if (prev.buildings3d !== s.buildings3d) this.applyBuildings();
     if (prev.showStops !== s.showStops) for (const l of ['dop-stops-dot', 'dop-stops-label']) if (this.map.getLayer(l)) this.map.setLayoutProperty(l, 'visibility', s.showStops ? 'visible' : 'none');
     if (s.showStops) this.scheduleStops();
     this.lastPush = 0;
+    this.last3d = 0;
     this.kick();
   }
 
   private applyBuildings() {
-    const style = this.map.getStyle();
-    for (const l of style.layers ?? []) if (l.type === 'fill-extrusion') this.map.setLayoutProperty(l.id, 'visibility', this.settings.buildings3d ? 'visible' : 'none');
+    for (const l of this.map.getStyle().layers ?? []) if (l.type === 'fill-extrusion' && !l.id.startsWith('dop-')) this.map.setLayoutProperty(l.id, 'visibility', this.settings.buildings3d ? 'visible' : 'none');
   }
 
   zoomBy(delta: number) { this.map.easeTo({ zoom: this.map.getZoom() + delta, duration: this.settings.reducedMotion ? 0 : 300 }); }
   resetNorth() { this.map.easeTo({ bearing: 0, duration: this.settings.reducedMotion ? 0 : 500 }); }
-  setPitched(on: boolean) { this.map.easeTo({ pitch: on ? 58 : 0, duration: this.settings.reducedMotion ? 0 : 700 }); }
+  setPitched(on: boolean) { this.map.easeTo({ pitch: on ? 58 : 0, zoom: on ? Math.max(this.map.getZoom(), 16) : this.map.getZoom(), duration: this.settings.reducedMotion ? 0 : 800 }); }
   setBearing(deg: number) { this.map.jumpTo({ bearing: deg }); }
   flyTo(lng: number, lat: number, zoom = 17) { this.map.easeTo({ center: [lng, lat], zoom, duration: this.settings.reducedMotion ? 0 : 900 }); }
 
@@ -398,11 +522,15 @@ export class MapController {
       if (freshness !== 'expired') out.push({ v, freshness });
       if (out.length >= limit) break;
     }
-    return out.sort((a, b2) => a.v.route.shortName.localeCompare(b2.v.route.shortName, 'cs', { numeric: true }));
+    return out.sort((a, c) => a.v.route.shortName.localeCompare(c.v.route.shortName, 'cs', { numeric: true }));
   }
 
-  resize() { this.map.resize(); }
+  isOnTrack(id: string): boolean { return this.follower.isOnTrack(id); }
 
+  /** Pro testy a diagnostiku: kolik vozidel je právě navázaných na trať. */
+  trackStats() { let on = 0, all = 0; for (const id of this.vehicles.keys()) { all++; if (this.follower.isOnTrack(id)) on++; } return { on, all }; }
+
+  resize() { this.map.resize(); }
   setViewPadding(p: { top: number; bottom: number; left: number; right: number }) { this.map.setPadding(p); }
 
   destroy() {

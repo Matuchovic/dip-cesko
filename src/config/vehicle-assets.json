@@ -127,6 +127,44 @@
           "toFront": 1
         }
       ],
+      "pieces": [
+        {
+          "index": 0,
+          "file": "/vehicles/tram-top-redwhite.map.p0.png",
+          "fromFront": 0,
+          "toFront": 0.29,
+          "width": 87,
+          "height": 224,
+          "pixelRatio": 2
+        },
+        {
+          "index": 1,
+          "file": "/vehicles/tram-top-redwhite.map.p1.png",
+          "fromFront": 0.29,
+          "toFront": 0.4728,
+          "width": 87,
+          "height": 142,
+          "pixelRatio": 2
+        },
+        {
+          "index": 2,
+          "file": "/vehicles/tram-top-redwhite.map.p2.png",
+          "fromFront": 0.4728,
+          "toFront": 0.6852,
+          "width": 87,
+          "height": 165,
+          "pixelRatio": 2
+        },
+        {
+          "index": 3,
+          "file": "/vehicles/tram-top-redwhite.map.p3.png",
+          "fromFront": 0.6852,
+          "toFront": 1,
+          "width": 87,
+          "height": 243,
+          "pixelRatio": 2
+        }
+      ],
       "sizing": {
         "spriteFromZoom": 15.5,
         "minScreenLengthPx": 34,
@@ -213,6 +251,35 @@
           "kind": "body",
           "fromFront": 0.6471,
           "toFront": 1
+        }
+      ],
+      "pieces": [
+        {
+          "index": 0,
+          "file": "/vehicles/train-top-bluewhite.map.p0.png",
+          "fromFront": 0,
+          "toFront": 0.3457,
+          "width": 83,
+          "height": 333,
+          "pixelRatio": 2
+        },
+        {
+          "index": 1,
+          "file": "/vehicles/train-top-bluewhite.map.p1.png",
+          "fromFront": 0.3457,
+          "toFront": 0.6408,
+          "width": 83,
+          "height": 285,
+          "pixelRatio": 2
+        },
+        {
+          "index": 2,
+          "file": "/vehicles/train-top-bluewhite.map.p2.png",
+          "fromFront": 0.6408,
+          "toFront": 1,
+          "width": 83,
+          "height": 346,
+          "pixelRatio": 2
         }
       ],
       "sizing": {

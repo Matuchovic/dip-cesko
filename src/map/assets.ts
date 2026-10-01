@@ -9,6 +9,7 @@ export interface VehicleAsset {
   frontDirectionDeg?: number;
   physical?: { lengthM: number; widthM: number; origin: string };
   segments?: { kind: 'body' | 'joint'; fromFront: number; toFront: number }[];
+  pieces?: { index: number; file: string; fromFront: number; toFront: number; width: number; height: number; pixelRatio: number }[];
   sizing?: { spriteFromZoom: number; minScreenLengthPx: number; maxScreenLengthPx: number };
   fallback?: 'marker';
 }

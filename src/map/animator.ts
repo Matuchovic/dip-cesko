@@ -74,6 +74,11 @@ export class VehicleAnimator {
     return false;
   }
 
+  /** Poslední přijaté měření (cíl animace) – pro navázání na koleje. */
+  target(id: string): Sample | null { return this.tracks.get(id)?.target ?? null; }
+  duration(id: string): number { return this.tracks.get(id)?.duration ?? 0; }
+  mode(id: string): Mode | null { return this.tracks.get(id)?.mode ?? null; }
+
   ids(): IterableIterator<string> { return this.tracks.keys(); }
   get size(): number { return this.tracks.size; }
 }

@@ -16,7 +16,7 @@ const ANDEL = { center: [14.4031, 50.0717], zoom: 17.4, bearing: 0, pitch: 0 };
 async function ready(page: Page, min = 1) {
   await page.waitForFunction((n) => {
     const d = (window as unknown as W).__doprava;
-    return Boolean(d?.map?.getLayer('dop-sprite')) && (d?.controller?.vehicles.size ?? 0) >= n;
+    return Boolean(d?.map?.getLayer('dop-pieces')) && (d?.controller?.vehicles.size ?? 0) >= n;
   }, min, { timeout: 45_000 });
 }
 async function jump(page: Page, opts: Record<string, unknown>) {
@@ -59,7 +59,7 @@ test('výběr vozidla klepnutím do mapy (zásah mimo střed)', async ({ page })
   await jump(page, { ...ANDEL, padding: { left: 420, top: 64, right: 0, bottom: 0 } });
   const pt = await page.evaluate(() => {
     const m = (window as unknown as W).__doprava!.map!;
-    const f = m.queryRenderedFeatures({ layers: ['dop-sprite', 'dop-marker'] }).map((x) => ({ p: m.project(x.geometry.coordinates), id: String(x.properties.id) }))
+    const f = m.queryRenderedFeatures({ layers: ['dop-pieces', 'dop-marker'] }).map((x) => ({ p: m.project(x.geometry.coordinates), id: String(x.properties.vid ?? x.properties.id) }))
       .find((x) => x.p.x > 460 && x.p.x < 1320 && x.p.y > 110 && x.p.y < 840);
     return f ? { x: f.p.x, y: f.p.y } : null;
   });
@@ -79,7 +79,7 @@ test('odjezdy: hledání klávesnicí, nula vs. neznámé zpoždění, zrušený
   await expect(page.locator('ul[aria-label^="Odjezdy"] li').first()).toBeVisible();
   await expect(page.locator('ul[aria-label^="Odjezdy"] .delay-unknown').first()).toContainText('bez údaje');
   await expect(page.locator('ul[aria-label^="Odjezdy"] .delay-ok').first()).toContainText('včas');
-  await expect(page.locator('ul[aria-label^="Odjezdy"] li.canceled').first()).toBeVisible();
+  await expect(page.locator('ul[aria-label^="Odjezdy"] li.canceled, ul[aria-label^="Odjezdy"] .dep-time.canceled').first()).toBeVisible();
   await page.getByRole('button', { name: 'Uložit zastávku do oblíbených' }).click();
   await page.screenshot({ path: `${SHOTS}/odjezdy-1440.png` });
   await page.goto('/oblibene');
@@ -132,8 +132,8 @@ test('natočení PNG: S/V/J/Z nezávisle na natočení mapy', async ({ page }) =
   await page.goto('/test/rotace');
   await ready(page, 9);
   for (const bearing of [0, 90, 225]) {
-    await jump(page, { center: [14.4035, 50.0716], zoom: 17, bearing, pitch: 0, padding: { left: 420, top: 64, right: 0, bottom: 0 } });
-    const rot = await page.evaluate(() => Object.fromEntries((window as unknown as W).__doprava!.map!.queryRenderedFeatures({ layers: ['dop-sprite'] }).map((f) => [String(f.properties.id), Number(f.properties.rot)])));
+    await jump(page, { center: [14.38, 50.06], zoom: 17, bearing, pitch: 0, padding: { left: 420, top: 64, right: 0, bottom: 0 } });
+    const rot = await page.evaluate(() => Object.fromEntries((window as unknown as W).__doprava!.map!.queryRenderedFeatures({ layers: ['dop-pieces'] }).map((f) => [String(f.properties.vid), Number(f.properties.rot)])));
     for (const m of ['tram', 'train']) {
       expect([rot[`demo:vehicle:rot-${m}-N`], rot[`demo:vehicle:rot-${m}-E`], rot[`demo:vehicle:rot-${m}-S`], rot[`demo:vehicle:rot-${m}-W`]]).toEqual([0, 90, 180, 270]);
     }
@@ -141,7 +141,7 @@ test('natočení PNG: S/V/J/Z nezávisle na natočení mapy', async ({ page }) =
   }
   // Detailní výřezy: každé vozidlo zvlášť při přiblížení 19,3 a natočení mapy 0° a 90°.
   for (const bearing of [0, 90]) for (const m of ['tram', 'train']) for (const [i, dir] of ['N', 'E', 'S', 'W'].entries()) {
-    const lngLat: [number, number] = [14.4035 + (i - 1.5) * 0.0011, 50.0716 + (m === 'tram' ? 0.0004 : -0.0004)];
+    const lngLat: [number, number] = [14.38 + (i - 1.5) * 0.0011, 50.06 + (m === 'tram' ? 0.0004 : -0.0004)];
     await jump(page, { center: lngLat, zoom: 19.3, bearing, pitch: 0, padding: { left: 420, top: 64, right: 0, bottom: 0 } });
     const p = await page.evaluate((c) => (window as unknown as W).__doprava!.map!.project(c), lngLat);
     await page.screenshot({ path: `${SHOTS}/rotace-zoom-${bearing}-${m}-${dir}.png`, clip: { x: p.x - 160, y: p.y - 160, width: 320, height: 320 } });

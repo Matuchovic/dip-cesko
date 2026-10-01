@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0 – 2026-10-01
+- Vozidla navázaná na trať z mapových dat (OSM: tramvajové koleje, železnice, silnice); mezi měřeními jízda po trati (A*), směr podle koleje.
+- Kloubové soupravy po částech (tramvaj 4, vlak 3) – projíždějí oblouky.
+- 3D vozidla v nakloněném pohledu (fill-extrusion: barevné pruhy, okna, čelo, klouby, pantograf); „Sledovat ve 3D“.
+- Odjezdy po linkách („v kolik co jede“): metro, tramvaje, trolejbusy, autobusy, vlaky; záložky druhů dopravy, přepínač linky/čas; živé odjezdy v detailu zastávky.
+- 7 jazyků (cs, en, de, ar – RTL, es, it, uk), automatický výběr podle prohlížeče, volba v Nastavení, popisky mapy v jazyce.
+- Výchozí světlý vzhled, čitelnější štítky nad mapou.
+
 ## [0.1.0] – 2026-10-01
 
 ### Přidáno
