@@ -9,9 +9,11 @@ import { badgeImage, clusterImage, stopLabelImage } from './images';
 import { TrackFollower } from './follower';
 import { TrackNetwork, type TrackKind } from './tracks';
 import { buildExtrusions, buildPieces, DEFAULT_SHAPES, type VehicleShape } from './vehicle3d';
-import { D2R, pointAlong, polyLength, type LngLat } from './geometry';
+import { bearingDeg, D2R, pointAlong, polyLength, type LngLat } from './geometry';
+import { VehicleLayer, type ModelVehicle } from './vehicle-layer';
+import { hasVehicleModel, MODEL_ZOOM as MODEL3D_ZOOM, VEHICLE_DIMENSIONS, type VehicleStyle } from './vehicle-presentation';
 
-export interface MapSettings { vehicleStyle: 'sprites' | 'markers'; buildings3d: boolean; showStops: boolean; reducedMotion: boolean }
+export interface MapSettings { vehicleStyle: VehicleStyle; buildings3d: boolean; showStops: boolean; reducedMotion: boolean }
 export interface CameraState { bearing: number; pitch: number; zoom: number; lng: number; lat: number }
 export interface MapEvents {
   onReady(): void;
@@ -31,6 +33,9 @@ export const FALLBACK_STYLE_URL = '/map/offline-style.json';
 /** Worker MapLibre servírovaný z /public (viz scripts/copy-maplibre-worker.mjs). */
 const WORKER_URL = '/maplibre/maplibre-gl-worker.mjs';
 const PRAGUE: [number, number] = [14.4205, 50.0815];
+const ROOF_PALETTE = ['#A65A3F', '#9A4E37', '#B0674A', '#6B6E73', '#5E6167'];
+const FACADE_PALETTE = ['#E9DFCB', '#DCCBA9', '#E5D3BC', '#D3CDC3', '#E8CFB8', '#CDBFAE', '#EFE6D2', '#D9C3A0'];
+const GLASS_PALETTE = ['#9DB0C0', '#A9B8C4', '#8FA2B4'];
 const ROAD_CLASSES = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'minor', 'service', 'busway', 'bus_guideway']);
 const RAIL_SUBCLASSES = new Set(['rail', 'light_rail', 'narrow_gauge', 'preserved', 'funicular']);
 
@@ -42,6 +47,7 @@ const HAS_3D = new Set<Mode>(['tram', 'train', 'bus', 'trolleybus', 'ferry']);
 export class MapController {
   readonly map: MlMap;
   private follower: TrackFollower;
+  private modelLayer = new VehicleLayer();
   private vehicles = new Map<string, VehicleState>();
   private modes = new Set<Mode>(MODES);
   private selectedId: string | null = null;
@@ -103,6 +109,10 @@ export class MapController {
     this.transport = undefined;
     await this.addVehicleImages();
     this.addLayers();
+    try { this.map.setProjection({ type: 'mercator' }); } catch { /* styl bez projekce */ }
+    if (!this.map.getLayer(this.modelLayer.id)) this.map.addLayer(this.modelLayer, 'dop-badge');
+    this.modelLayer.setEnabled(this.settings.vehicleStyle === 'models');
+    this.styleBuildings();
     this.applyBuildings();
     this.applyLabels();
     this.ready = true;
@@ -223,7 +233,7 @@ export class MapController {
     for (const f of feats) {
       const p = f.properties ?? {};
       const sub = String(p.subclass ?? ''), cls = String(p.class ?? '');
-      const ok = kind === 'tram' ? sub === 'tram' : kind === 'rail' ? RAIL_SUBCLASSES.has(sub) || (cls === 'rail' && !sub) : ROAD_CLASSES.has(cls);
+      const ok = kind === 'tram' ? sub === 'tram' : kind === 'subway' ? sub === 'subway' : kind === 'rail' ? RAIL_SUBCLASSES.has(sub) || (cls === 'rail' && !sub) : ROAD_CLASSES.has(cls);
       if (!ok) continue;
       const g = f.geometry;
       if (g.type === 'LineString') lines.push(g.coordinates.map((c) => ({ lng: c[0]!, lat: c[1]! })));
@@ -238,6 +248,7 @@ export class MapController {
   }
 
   private lengthFor(mode: Mode): number {
+    if (this.settings.vehicleStyle === 'models' && hasVehicleModel(mode)) return VEHICLE_DIMENSIONS[mode].length;
     const a = mapAssetFor(mode);
     return a?.physical?.lengthM ?? DEFAULT_SHAPES[mode].lengthM;
   }
@@ -291,9 +302,9 @@ export class MapController {
     const animating = this.follower.animator.isAnimating(now);
     const minGap = this.settings.reducedMotion ? 1000 : 33;
     if (z >= LIVE_ZOOM - 0.3 && now - this.lastPush >= minGap) { this.pushLive(now); this.lastPush = now; }
-    if (this.follow && this.selectedId) this.followStep(now);
+    const following = this.follow && this.selectedId ? this.followStep(now) : false;
     if (now - this.lastSelEmit > 1000) this.emitSelected();
-    if (animating || this.follow) this.raf = requestAnimationFrame(this.frame);
+    if (animating || following) this.raf = requestAnimationFrame(this.frame);
   };
 
   private pushLive(now: number) {
@@ -302,7 +313,9 @@ export class MapController {
     const zoom = this.map.getZoom(), mapBearing = this.map.getBearing(), pitch = this.map.getPitch();
     const mpp = metersPerPixel(this.map.getCenter().lat, zoom);
     const pitchK = Math.cos(pitch * D2R);
-    const want3d = this.pitchedMode && zoom >= MODEL_ZOOM && now - this.last3d >= (this.settings.reducedMotion ? 1000 : 90);
+    const style = this.settings.vehicleStyle;
+    const want3d = style === 'sprites' && this.pitchedMode && zoom >= MODEL_ZOOM && now - this.last3d >= (this.settings.reducedMotion ? 1000 : 90);
+    const models: ModelVehicle[] = [];
     const center = this.map.getCenter();
     const live: Feature[] = [], pieces: Feature[] = [], solids: Feature[] = [];
     const visible: { id: string; d: number }[] = [];
@@ -325,33 +338,51 @@ export class MapController {
       const mid = s.body.length >= 2 && len > 0.5 ? pointAlong(s.body, len / 2).p : s.front;
       const hasBody = s.bearing !== null && len > 0.5;
       const sprite = Boolean(asset && hasBody && asset.pieces?.length && this.map.hasImage(`${asset.id}#0`));
+      const mode = v.route.mode;
+      const model = style === 'models' && hasBody && zoom >= MODEL3D_ZOOM && hasVehicleModel(mode);
+      if (model && hasVehicleModel(mode)) {
+        const b = s.body;
+        const heading = len > 1 ? bearingDeg(b[0]!, b[b.length - 1]!) : (s.bearing as number);
+        models.push({ id, mode, lng: mid.lng, lat: mid.lat, bearing: heading, stale });
+      }
       const shape = this.shapeFor(v, asset, stale, sel, rank < DETAIL_3D_MAX);
       const state = sel ? 'selected' : stale ? 'stale' : 'live';
       let off = zoom < SPRITE_ZOOM ? 9 : 15;
       if (hasBody && zoom >= SPRITE_ZOOM) {
-        const lenPx = shape.lengthM / mpp, widPx = shape.widthM / mpp;
+        const dims = model && hasVehicleModel(mode) ? VEHICLE_DIMENSIONS[mode] : null;
+        const L = dims?.length ?? shape.lengthM, W = dims?.width ?? shape.widthM, H = dims?.height ?? 3.6;
+        const f = dims ? Math.min(340, Math.max(44, L / mpp)) / (L / mpp) : 1;
+        const lenPx = (L / mpp) * f, widPx = (W / mpp) * f;
         const th = ((s.bearing as number) - mapBearing) * D2R;
-        off = (Math.abs(Math.cos(th)) * lenPx * pitchK + Math.abs(Math.sin(th)) * widPx) / 2 + 7 + (this.pitchedMode ? (3.6 / mpp) * Math.sin(pitch * D2R) : 0);
+        off = (Math.abs(Math.cos(th)) * lenPx * pitchK + Math.abs(Math.sin(th)) * widPx) / 2 + 7 + (model || this.pitchedMode ? ((H / mpp) * f) * Math.sin(pitch * D2R) : 0);
         off = Math.min(off, 320);
       }
       live.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [mid.lng, mid.lat] }, properties: {
-        id, mode: v.route.mode, sprite, has3d: HAS_3D.has(v.route.mode) && hasBody, fresh: stale ? 'stale' : 'live',
+        id, mode: v.route.mode, sprite: sprite || model, has3d: style === 'sprites' && HAS_3D.has(v.route.mode) && hasBody, fresh: stale ? 'stale' : 'live',
         badge: `b|${v.route.mode}|${safe(v.route.shortName)}|${state}`, sort: sel ? 1000 : stale ? 1 : 10, off: [0, -Math.round(off)],
       } });
       if (sprite && asset && !this.pitchedMode && zoom >= SPRITE_ZOOM) pieces.push(...buildPieces(s.body, shape, asset.id, { fresh: stale ? 'stale' : 'live', sort: sel ? 1000 : 10 }));
       if (want3d && hasBody && HAS_3D.has(v.route.mode)) solids.push(...buildExtrusions(s.body, shape));
     });
     (this.map.getSource(LIVE) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: live });
+    this.modelLayer.setVehicles(style === 'models' ? models : []);
     if (!this.pitchedMode || zoom < SPRITE_ZOOM) (this.map.getSource(PIECES) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: pieces });
     if (want3d) { (this.map.getSource(V3D) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: solids }); this.last3d = now; }
   }
 
-  private followStep(now: number) {
+  /** Kamera plynule drží vybrané vozidlo; true = ještě se pohybuje (jinak smyčka usne do dalších dat). */
+  private followStep(now: number): boolean {
     const s = this.selectedId ? this.follower.sample(this.selectedId, now) : null;
-    if (!s) return;
+    if (!s) return false;
+    if (this.map.isMoving()) return true;
+    const len = polyLength(s.body);
+    const t = s.body.length >= 2 && len > 0.5 ? pointAlong(s.body, len / 2).p : s.front;
     const c = this.map.getCenter();
+    const a = this.map.project([t.lng, t.lat]), b = this.map.project([c.lng, c.lat]);
+    if (Math.hypot(a.x - b.x, a.y - b.y) < 0.75) return false;
     const k = this.settings.reducedMotion ? 1 : 0.12;
-    this.map.jumpTo({ center: [c.lng + (s.front.lng - c.lng) * k, c.lat + (s.front.lat - c.lat) * k] });
+    this.map.jumpTo({ center: [c.lng + (t.lng - c.lng) * k, c.lat + (t.lat - c.lat) * k] });
+    return true;
   }
 
   private emitSelected() {
@@ -396,7 +427,7 @@ export class MapController {
     if (v && opts.fly) {
       const s = this.follower.sample(v.id, Date.now());
       const p = s?.front ?? { lng: v.lon, lat: v.lat };
-      this.map.easeTo({ center: [p.lng, p.lat], zoom: Math.max(this.map.getZoom(), opts.follow ? 17.4 : 16.6), pitch: opts.follow ? Math.max(this.map.getPitch(), 55) : this.map.getPitch(), duration: this.settings.reducedMotion ? 0 : 1100 });
+      this.map.easeTo({ center: [p.lng, p.lat], zoom: Math.max(this.map.getZoom(), opts.follow ? 17.8 : 16.6), pitch: opts.follow ? Math.max(this.map.getPitch(), 55) : this.map.getPitch(), duration: this.settings.reducedMotion ? 0 : 1100 });
     }
     this.setFollow(Boolean(v && opts.follow));
     this.lastPush = 0;
@@ -430,10 +461,15 @@ export class MapController {
 
   private hover(x: number, y: number) {
     if (this.coarse) return;
-    this.map.getCanvas().style.cursor = this.pick(x, y) ? 'pointer' : '';
+    const onModel = this.settings.vehicleStyle === 'models' && this.modelLayer.pick(x, y, 10) !== null;
+    this.map.getCanvas().style.cursor = onModel || this.pick(x, y) ? 'pointer' : '';
   }
 
   private async handleClick(x: number, y: number) {
+    if (this.settings.vehicleStyle === 'models') {
+      const hit = this.modelLayer.pick(x, y, this.coarse ? 26 : 14);
+      if (hit) { this.events.onStop(null); this.select(hit); return; }
+    }
     const f = this.pick(x, y);
     if (!f) { if (this.selectedId) this.select(null); this.events.onStop(null); return; }
     if (f.layer.id === 'dop-ov-cluster') {
@@ -480,6 +516,11 @@ export class MapController {
     this.settings = s;
     this.follower.animator.setReducedMotion(s.reducedMotion);
     if (!this.ready) return;
+    this.modelLayer.setEnabled(s.vehicleStyle === 'models');
+    if (prev.vehicleStyle !== s.vehicleStyle) {
+      for (const id of [PIECES, V3D]) (this.map.getSource(id) as GeoJSONSource | undefined)?.setData(EMPTY);
+      this.applyPitchMode(true);
+    }
     if (prev.buildings3d !== s.buildings3d) this.applyBuildings();
     if (prev.showStops !== s.showStops) for (const l of ['dop-stops-dot', 'dop-stops-label']) if (this.map.getLayer(l)) this.map.setLayoutProperty(l, 'visibility', s.showStops ? 'visible' : 'none');
     if (s.showStops) this.scheduleStops();
@@ -489,8 +530,39 @@ export class MapController {
   }
 
   private applyBuildings() {
-    for (const l of this.map.getStyle().layers ?? []) if (l.type === 'fill-extrusion' && !l.id.startsWith('dop-')) this.map.setLayoutProperty(l.id, 'visibility', this.settings.buildings3d ? 'visible' : 'none');
+    for (const l of this.map.getStyle().layers ?? []) if (l.type === 'fill-extrusion' && (!l.id.startsWith('dop-') || l.id === 'dop-roofs')) this.map.setLayoutProperty(l.id, 'visibility', this.settings.buildings3d ? 'visible' : 'none');
   }
+
+  /**
+   * Barevné 3D budovy: barva z OSM (building:colour / materiál), jinak pražská paleta fasád,
+   * výškové budovy sklo; samostatná vrstva střech (tašky / plech), světlo a obloha pro naklonění.
+   */
+  private styleBuildings() {
+    const layers = this.map.getStyle().layers ?? [];
+    const h: ExpressionSpecification = ['to-number', ['get', 'render_height'], 0];
+    const hash = ['abs', ['+', ['to-number', ['id'], 0], ['round', ['*', h, 7]], ['round', ['*', ['to-number', ['get', 'render_min_height'], 0], 3]]]];
+    const pick = (list: string[]) => ['match', ['%', hash, list.length], ...list.slice(0, -1).flatMap((c, i) => [i, c]), list[list.length - 1]];
+    const facade = ['coalesce', ['get', 'colour'], ['case', ['>', h, 45], pick(GLASS_PALETTE), pick(FACADE_PALETTE)]] as unknown as ExpressionSpecification;
+    const roof = ['case', ['>', h, 30], pick(ROOF_PALETTE.slice(3)), pick(ROOF_PALETTE)] as unknown as ExpressionSpecification;
+    layers.forEach((l, i) => {
+      if (l.type !== 'fill-extrusion' || l.id.startsWith('dop-') || !('source-layer' in l) || l['source-layer'] !== 'building') return;
+      try {
+        this.map.setPaintProperty(l.id, 'fill-extrusion-color', facade);
+        this.map.setPaintProperty(l.id, 'fill-extrusion-opacity', 1);
+        this.map.setPaintProperty(l.id, 'fill-extrusion-vertical-gradient', true);
+        if (!this.map.getLayer('dop-roofs')) {
+          const before = layers.slice(i + 1).find((x) => this.map.getLayer(x.id))?.id;
+          this.map.addLayer({ id: 'dop-roofs', type: 'fill-extrusion', source: l.source, 'source-layer': 'building', minzoom: l.minzoom ?? 14,
+            ...(l.filter ? { filter: l.filter } : {}),
+            paint: { 'fill-extrusion-color': roof, 'fill-extrusion-base': h, 'fill-extrusion-height': ['+', h, 0.6], 'fill-extrusion-opacity': 1 } } as LayerSpecification, before);
+        }
+      } catch { /* jiný styl bez atributů OpenMapTiles */ }
+    });
+    try { this.map.setLight({ anchor: 'map', position: [1.4, 210, 40], color: '#ffffff', intensity: 0.42 }); } catch { /* volitelné */ }
+    try { this.map.setSky({ 'sky-color': '#BCD8F5', 'horizon-color': '#EAF1F7', 'fog-color': '#EEF2F5', 'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.7, 'fog-ground-blend': 0.9 }); } catch { /* volitelné */ }
+  }
+
+  modelDiagnostics() { return this.modelLayer.diagnostics(); }
 
   zoomBy(delta: number) { this.map.easeTo({ zoom: this.map.getZoom() + delta, duration: this.settings.reducedMotion ? 0 : 300 }); }
   resetNorth() { this.map.easeTo({ bearing: 0, duration: this.settings.reducedMotion ? 0 : 500 }); }

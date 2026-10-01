@@ -42,7 +42,7 @@ export default function SettingsPanel() {
       </div>
       <Seg k="theme" label={t('set_theme')} options={[['light', t('set_light')], ['dark', t('set_dark')], ['system', t('set_system')]]} />
       <Seg k="motion" label={t('set_motion')} options={[['system', t('set_system')], ['full', t('set_full')], ['reduce', t('set_reduced')]]} />
-      <Seg k="vehicleStyle" label={t('set_vehicles')} options={[['sprites', t('set_sprites')], ['markers', t('set_markers')]]} />
+      <Seg k="vehicleStyle" label={t('set_vehicles')} options={[['models', t('set_models')], ['sprites', t('set_sprites')], ['markers', t('set_markers')]]} />
       <Toggle k="buildings3d" label={t('set_buildings')} hint={t('set_buildingsHint')} />
       <Toggle k="showStops" label={t('set_stops')} hint={t('set_stopsHint')} />
       <div className="actions">

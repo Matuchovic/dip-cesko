@@ -25,6 +25,7 @@ export default function MapChrome({ mobile }: { mobile: boolean }) {
   const zoom = useStore(appStore, (s) => s.zoom);
   const showStops = useStore(settingsStore, (s) => s.showStops);
   const buildings = useStore(settingsStore, (s) => s.buildings3d);
+  const vehicleStyle = useStore(settingsStore, (s) => s.vehicleStyle);
   const [layersOpen, setLayersOpen] = useState(false);
   const msg = locate === 'denied' ? t('toast_locDenied') : locate === 'unavailable' ? t('toast_locUnavailable') : basemap === 'fallback' ? t('toast_basemap') : null;
   const [dismissed, setDismissed] = useState<string | null>(null);
@@ -76,6 +77,12 @@ export default function MapChrome({ mobile }: { mobile: boolean }) {
           <div id="layers-menu" className="card" style={{ position: 'absolute', right: 56, top: mobile ? 'auto' : 160, bottom: mobile ? 0 : 'auto', width: 250 }}>
             <div className="switch-row"><span>{t('layer_stops')}</span><label className="switch"><input type="checkbox" checked={showStops} onChange={(e) => settingsStore.set({ showStops: e.target.checked })} aria-label={t('layer_stopsAria')} /><span /></label></div>
             <div className="switch-row"><span>{t('layer_buildings')}</span><label className="switch"><input type="checkbox" checked={buildings} onChange={(e) => settingsStore.set({ buildings3d: e.target.checked })} aria-label={t('layer_buildingsAria')} /><span /></label></div>
+            <div className="field" style={{ marginTop: 'var(--s2)' }}>
+              <label className="label" htmlFor="vehicle-style">{t('set_vehicles')}</label>
+              <select id="vehicle-style" className="input" value={vehicleStyle} onChange={(e) => settingsStore.set({ vehicleStyle: e.target.value as typeof vehicleStyle })}>
+                <option value="models">{t('set_models')}</option><option value="sprites">{t('set_sprites')}</option><option value="markers">{t('set_markers')}</option>
+              </select>
+            </div>
             <p className="hint" style={{ marginBottom: 0 }}>{t('layersHint', { z: zoom.toFixed(1) })}</p>
           </div>
         )}

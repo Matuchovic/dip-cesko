@@ -22,3 +22,12 @@
 GOLEMIO_API_KEY=... npm run verify:golemio
 ```
 Vypíše, která pole adaptér ve skutečné odpovědi našel. Chybějící pole upravte v `src/providers/pid/golemio.ts`.
+
+## Vyhledávání spojení – Transitous (MOTIS 2)
+- Endpoint `https://api.transitous.org/api/{verze}/plan` (aplikace zkouší v6 → v1 podle dostupnosti), parametry `fromPlace`, `toPlace`, `time`, `arriveBy`, `pedestrianProfile=WHEELCHAIR`.
+- Podmínky: komunitní služba provozovaná dobrovolníky pro open-source a neziskové aplikace; před větším provozem nebo komerčním použitím je třeba je kontaktovat. Aplikace posílá identifikaci (User-Agent s odkazem na repozitář), výsledky drží 60 s v cache a v UI uvádí zdroj (Transitous, transitous.org/sources, © OpenStreetMap).
+- Formát ověřen podle OpenAPI specifikace MOTIS (Itinerary / Leg / Place); živé volání z vývojového prostředí ověřit nešlo (síťová omezení).
+- Záloha: odkaz „Otevřít v Google Mapách“ (předvyplněné odkud–kam, veřejná doprava).
+
+## 3D budovy
+- OpenMapTiles vrstva `building`: `render_height`, `render_min_height`, `colour` (z OSM building:colour nebo odvozená z materiálu). Kde barva chybí, použije se paleta fasád; střechy jsou samostatná vrstva.

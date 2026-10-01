@@ -10,7 +10,7 @@ import { DelayLabel, LineBadge } from '../ui';
 import { IconSwap, IconWalk } from '../icons';
 
 interface Pt { lat: number; lon: number; label: string }
-type Result = { status: 'ok' | 'empty' | 'unavailable' | 'error' | 'invalid'; journeys?: Journey[]; message?: string; reason?: string; fetchedAt?: string };
+type Result = { status: 'ok' | 'empty' | 'unavailable' | 'error' | 'invalid'; journeys?: Journey[]; message?: string; reason?: string; fetchedAt?: string; source?: string };
 
 function localInputValue(ms: number) {
   const off = tzOffsetMinutes(ms, PRAGUE_TZ);
@@ -132,6 +132,12 @@ export default function PlannerPanel() {
           })}
         </section>
       )}
+      {result && from && to && (
+        <div className="actions">
+          <a className="btn btn-secondary" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/dir/?api=1&origin=${from.lat},${from.lon}&destination=${to.lat},${to.lon}&travelmode=transit`}>{t('pl_google')}</a>
+        </div>
+      )}
+      {result?.source && <p className="footer-note">{t('pl_source', { s: result.source })}</p>}
     </>
   );
 }

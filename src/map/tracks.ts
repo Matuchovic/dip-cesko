@@ -1,7 +1,7 @@
 import { angDiff, bearingDeg, D2R, distM, lerp, type LngLat } from './geometry';
 
 /** Druh dopravní cesty z mapových dat (OpenMapTiles: transportation). */
-export type TrackKind = 'tram' | 'rail' | 'road';
+export type TrackKind = 'tram' | 'rail' | 'road' | 'subway';
 
 export interface Snap { seg: number; t: number; point: LngLat; dist: number; segBearing: number }
 

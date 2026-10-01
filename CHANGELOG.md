@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 – 2026-10-01
+- Skutečné 3D modely vozidel (Three.js ve společném WebGL kontextu MapLibre; tramvaj, vlak, metro, autobus, trolejbus) – převzaté z úpravy „OPRAVA-3D“ a napojené na naše navázání na trať: model stojí na koleji a míří podél ní.
+- Výběr kliknutím přímo do 3D karoserie; volba 3D modely / PNG shora / značky (Vrstvy mapy, Nastavení), jednorázová migrace uložených nastavení na 3D.
+- Barevné 3D budovy: barva z OSM (building:colour, materiál), jinak paleta fasád; výškové budovy sklo; samostatné střechy (tašky, plech), světlo a obloha.
+- Metro se přichytává na koleje metra z OSM (pokud zdroj polohy metra poskytne).
+- Vyhledávání spojení bez vlastního serveru: veřejné API Transitous (MOTIS 2) s automatickou volbou verze API, krátkou cache a uvedením zdroje; záložní odkaz do Google Map. Vlastní OTP (OTP_GRAPHQL_URL) má dál přednost, PLANNER=off plánovač vypne.
+- Sledování vozidla dokončí přiblížení a smyčka se zastaví, když vozidlo stojí.
+
 ## 0.2.0 – 2026-10-01
 - Vozidla navázaná na trať z mapových dat (OSM: tramvajové koleje, železnice, silnice); mezi měřeními jízda po trati (A*), směr podle koleje.
 - Kloubové soupravy po částech (tramvaj 4, vlak 3) – projíždějí oblouky.

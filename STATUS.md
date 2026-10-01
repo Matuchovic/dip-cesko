@@ -1,3 +1,8 @@
+# Stav – 0.3.0
+
+Funguje: živé polohy PID (Golemio) navázané na trať, 3D modely vozidel, barevné 3D budovy, odjezdy po linkách pro všechny druhy dopravy, 7 jazyků, vyhledávání spojení přes Transitous (bez vlastního serveru), PWA.
+Omezení: Transitous je komunitní služba pro nekomerční použití; modely se v obloucích zatím neohýbají (stojí tečně ke koleji); fotorealistické budovy vyžadují klíč Google Map Tiles API s fakturací.
+
 # Stav projektu — verze 0.1.0 (1. 10. 2026)
 
 ## Hotovo a ověřené v testovacím prostředí

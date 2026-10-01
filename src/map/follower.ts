@@ -3,8 +3,8 @@ import { VehicleAnimator } from './animator';
 import { angDiff, bearingDeg, concat, D2R, distM, offsetM, pointAlong, polyLength, slice, tail, type LngLat } from './geometry';
 import type { TrackKind, TrackNetwork } from './tracks';
 
-export const KIND_BY_MODE: Partial<Record<Mode, TrackKind>> = { tram: 'tram', train: 'rail', bus: 'road', trolleybus: 'road' };
-const SNAP_RADIUS: Record<TrackKind, number> = { tram: 28, rail: 45, road: 30 };
+export const KIND_BY_MODE: Partial<Record<Mode, TrackKind>> = { tram: 'tram', train: 'rail', metro: 'subway', bus: 'road', trolleybus: 'road' };
+const SNAP_RADIUS: Record<TrackKind, number> = { tram: 28, rail: 45, road: 30, subway: 60 };
 
 interface Follow { path: LngLat[]; len: number; startedAt: number; duration: number; trail: LngLat[]; measuredAt: number; bearing: number | null; onTrack: boolean }
 

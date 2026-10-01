@@ -7,6 +7,7 @@ import { log } from '@/server/log';
 import { tooMany } from '@/server/respond';
 import { inCzechia } from '@/domain/geo';
 import { PLAN_QUERY, PlannerError, mapPlanResponse, planVariables } from '@/planning/otp';
+import { planTransitous, TRANSITOUS_ATTRIBUTION } from '@/planning/transitous';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +19,18 @@ export async function POST(req: Request) {
   let body: z.infer<typeof Body>;
   try { body = Body.parse(await req.json()); } catch { return NextResponse.json({ status: 'invalid', message: 'Zkontrolujte výchozí místo, cíl a čas.' }, { status: 400 }); }
   if (!serverEnv.otpUrl) {
-    return NextResponse.json({ status: 'unavailable', reason: 'not_configured', message: 'Plánovač spojení zatím není připojen. Nabídneme odjezdy ze zastávek a mapu.' }, { status: 503 });
+    // Bez vlastního OTP serveru: veřejné API Transitous (v ukázkovém režimu se nevolá – žádná živá data).
+    if (serverEnv.demo || process.env.PLANNER === 'off') {
+      return NextResponse.json({ status: 'unavailable', reason: 'not_configured', message: 'Plánovač spojení zatím není připojen. Nabídneme odjezdy ze zastávek a mapu.' }, { status: 503 });
+    }
+    try {
+      const journeys = await planTransitous(body);
+      return NextResponse.json({ status: journeys.length ? 'ok' : 'empty', journeys, source: TRANSITOUS_ATTRIBUTION, fetchedAt: new Date().toISOString() }, { headers: { 'Cache-Control': 'no-store' } });
+    } catch (err) {
+      log('error', 'planner.transitous', { error: err instanceof Error ? err.message : String(err) });
+      if (err instanceof PlannerError) return NextResponse.json({ status: 'invalid', reason: err.code, message: err.message }, { status: 400 });
+      return NextResponse.json({ status: 'error', message: 'Plánovač je dočasně nedostupný. Zkuste to prosím později.' }, { status: 502 });
+    }
   }
   const url = new URL(serverEnv.otpUrl);
   try {

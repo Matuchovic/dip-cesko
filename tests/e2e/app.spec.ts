@@ -53,6 +53,7 @@ for (const s of SIZES) {
 }
 
 test('výběr vozidla klepnutím do mapy (zásah mimo střed)', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('doprava.settings.v1', JSON.stringify({ vehicleStyle: 'sprites', rev: 3 })));
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await ready(page);
@@ -127,6 +128,7 @@ test('výpadek připojení a návrat do aplikace', async ({ browser }) => {
 });
 
 test('natočení PNG: S/V/J/Z nezávisle na natočení mapy', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('doprava.settings.v1', JSON.stringify({ vehicleStyle: 'sprites', rev: 3 })));
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/test/rotace');

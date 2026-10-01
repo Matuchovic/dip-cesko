@@ -10,6 +10,7 @@ export default function RotationHarness() {
   return (
     <>
       <h1>Test natočení vozidel</h1>
+      <div className="actions"><button type="button" className="btn btn-primary" disabled={!ready} onClick={() => mapApi.controller?.map.jumpTo({ center: [14.38, 50.06], zoom: 17.5, bearing: -25, pitch: 62 })}>Prostorový pohled</button></div>
       <p className="hint">Horní řada: tramvaje S, V, J, Z (0°, 90°, 180°, 270°). Dolní řada: vlaky. Nahoře uprostřed: přechod 359° ↔ 1° každé 4 s. Čelo vozidla musí vždy mířit ve směru jízdy bez ohledu na natočení mapy.</p>
       <div className="legs" role="group" aria-label="Natočení mapy">
         {[0, 45, 90, 180, 270, 315].map((b) => <button key={b} type="button" className="chip" disabled={!ready} aria-pressed={bearing === b} onClick={() => go(b)}>Mapa {b}°</button>)}
