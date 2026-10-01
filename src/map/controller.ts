@@ -33,9 +33,10 @@ export const FALLBACK_STYLE_URL = '/map/offline-style.json';
 /** Worker MapLibre servírovaný z /public (viz scripts/copy-maplibre-worker.mjs). */
 const WORKER_URL = '/maplibre/maplibre-gl-worker.mjs';
 const PRAGUE: [number, number] = [14.4205, 50.0815];
-const ROOF_PALETTE = ['#A65A3F', '#9A4E37', '#B0674A', '#6B6E73', '#5E6167'];
-const FACADE_PALETTE = ['#E9DFCB', '#DCCBA9', '#E5D3BC', '#D3CDC3', '#E8CFB8', '#CDBFAE', '#EFE6D2', '#D9C3A0'];
-const GLASS_PALETTE = ['#9DB0C0', '#A9B8C4', '#8FA2B4'];
+/** Světlé pastelové fasády a jemně cihlové střechy (vyladěno náhledem; tmavé a syté barvy působily levně). */
+const FACADE_PALETTE = ['#F1E9DA', '#EADFC8', '#F0DDD3', '#E4E6E9', '#EDE4D3', '#F3EBCF', '#F5F1EA', '#E9E1D6'];
+const ROOF_PALETTE = ['#DCC2B4', '#D6BBAC', '#D2C6BC', '#CFCAC4', '#D9B9A6'];
+const HIDDEN_BASEMAP_LAYERS = ['poi_r7', 'poi_r20', 'poi_transit'];
 const ROAD_CLASSES = new Set(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'minor', 'service', 'busway', 'bus_guideway']);
 const RAIL_SUBCLASSES = new Set(['rail', 'light_rail', 'narrow_gauge', 'preserved', 'funicular']);
 
@@ -542,8 +543,9 @@ export class MapController {
     const h: ExpressionSpecification = ['to-number', ['get', 'render_height'], 0];
     const hash = ['abs', ['+', ['to-number', ['id'], 0], ['round', ['*', h, 7]], ['round', ['*', ['to-number', ['get', 'render_min_height'], 0], 3]]]];
     const pick = (list: string[]) => ['match', ['%', hash, list.length], ...list.slice(0, -1).flatMap((c, i) => [i, c]), list[list.length - 1]];
-    const facade = ['coalesce', ['get', 'colour'], ['case', ['>', h, 45], pick(GLASS_PALETTE), pick(FACADE_PALETTE)]] as unknown as ExpressionSpecification;
-    const roof = ['case', ['>', h, 30], pick(ROOF_PALETTE.slice(3)), pick(ROOF_PALETTE)] as unknown as ExpressionSpecification;
+    // Barvy z OSM (building:colour) se nepoužívají: vedly k černým a sytě modrým blokům.
+    const facade = ['case', ['>', h, 40], '#DCE3EA', pick(FACADE_PALETTE)] as unknown as ExpressionSpecification;
+    const roof = ['case', ['>', h, 40], '#D3D8DD', pick(ROOF_PALETTE)] as unknown as ExpressionSpecification;
     layers.forEach((l, i) => {
       if (l.type !== 'fill-extrusion' || l.id.startsWith('dop-') || !('source-layer' in l) || l['source-layer'] !== 'building') return;
       try {
@@ -554,11 +556,13 @@ export class MapController {
           const before = layers.slice(i + 1).find((x) => this.map.getLayer(x.id))?.id;
           this.map.addLayer({ id: 'dop-roofs', type: 'fill-extrusion', source: l.source, 'source-layer': 'building', minzoom: l.minzoom ?? 14,
             ...(l.filter ? { filter: l.filter } : {}),
-            paint: { 'fill-extrusion-color': roof, 'fill-extrusion-base': h, 'fill-extrusion-height': ['+', h, 0.6], 'fill-extrusion-opacity': 1 } } as LayerSpecification, before);
+            paint: { 'fill-extrusion-color': roof, 'fill-extrusion-base': h, 'fill-extrusion-height': ['+', h, 0.4], 'fill-extrusion-opacity': 1 } } as LayerSpecification, before);
         }
       } catch { /* jiný styl bez atributů OpenMapTiles */ }
     });
-    try { this.map.setLight({ anchor: 'map', position: [1.4, 210, 40], color: '#ffffff', intensity: 0.42 }); } catch { /* volitelné */ }
+    try { this.map.setLight({ anchor: 'viewport', position: [1.15, 210, 30], color: '#ffffff', intensity: 0.25 }); } catch { /* volitelné */ }
+    // Klidnější podklad: drobné body zájmu a duplicitní značky zastávek (máme vlastní) skrýt.
+    for (const id of HIDDEN_BASEMAP_LAYERS) if (this.map.getLayer(id)) this.map.setLayoutProperty(id, 'visibility', 'none');
     try { this.map.setSky({ 'sky-color': '#BCD8F5', 'horizon-color': '#EAF1F7', 'fog-color': '#EEF2F5', 'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.7, 'fog-ground-blend': 0.9 }); } catch { /* volitelné */ }
   }
 

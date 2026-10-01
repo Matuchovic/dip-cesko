@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1 – 2026-10-01
+- 3D budovy: světlé pastelové fasády a jemně cihlové střechy místo tmavých stěn a sytých střech; bez barev z OSM (černé a modré bloky); měkčí světlo.
+- Klidnější podklad: skryté drobné body zájmu a duplicitní značky zastávek z podkladu.
+
 ## 0.3.0 – 2026-10-01
 - Skutečné 3D modely vozidel (Three.js ve společném WebGL kontextu MapLibre; tramvaj, vlak, metro, autobus, trolejbus) – převzaté z úpravy „OPRAVA-3D“ a napojené na naše navázání na trať: model stojí na koleji a míří podél ní.
 - Výběr kliknutím přímo do 3D karoserie; volba 3D modely / PNG shora / značky (Vrstvy mapy, Nastavení), jednorázová migrace uložených nastavení na 3D.
