@@ -1,0 +1,7 @@
+{
+  "version": 8,
+  "name": "Doprava – záložní podklad",
+  "metadata": { "doprava:note": "Záložní styl bez geografie. Použije se, když mapový podklad není dostupný (nebo v testech bez sítě)." },
+  "sources": {},
+  "layers": [{ "id": "background", "type": "background", "paint": { "background-color": "#E9E7F1" } }]
+}

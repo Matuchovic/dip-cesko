@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+.env
+.env.local
+test-results
+playwright-report
+*.tsbuildinfo
+next-env.d.ts
+public/maplibre
+data/pid
+docs/screenshots/*.tmp

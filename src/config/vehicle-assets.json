@@ -1,0 +1,390 @@
+{
+  "version": 1,
+  "generatedBy": "scripts/build-assets.mjs",
+  "categoryDefaults": {
+    "tram": {
+      "map": "tram-top-redwhite",
+      "detail": "tram-oblique-redwhite"
+    },
+    "train": {
+      "map": "train-top-bluewhite",
+      "detail": "train-oblique-bluewhite"
+    },
+    "bus": {
+      "map": null,
+      "detail": null
+    },
+    "trolleybus": {
+      "map": null,
+      "detail": null
+    },
+    "metro": {
+      "map": null,
+      "detail": null
+    },
+    "ferry": {
+      "map": null,
+      "detail": null
+    },
+    "funicular": {
+      "map": null,
+      "detail": null
+    },
+    "other": {
+      "map": null,
+      "detail": null
+    }
+  },
+  "assets": [
+    {
+      "id": "tram-top-redwhite",
+      "category": "tram",
+      "view": "top-down",
+      "source": {
+        "file": "assets/source/tram-top-redwhite.png",
+        "bytes": 1256157,
+        "width": 1024,
+        "height": 1536,
+        "format": "png",
+        "alpha": {
+          "hasAlpha": true,
+          "opaque": 227615,
+          "partial": 20647,
+          "transparent": 1324602,
+          "visibleThreshold": 16
+        },
+        "visibleRect": {
+          "x": 430,
+          "y": 15,
+          "width": 166,
+          "height": 1490
+        }
+      },
+      "variants": [
+        {
+          "purpose": "map",
+          "file": "/vehicles/tram-top-redwhite.map.png",
+          "width": 87,
+          "height": 768,
+          "pixelRatio": 2,
+          "bytes": 163553
+        }
+      ],
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "directionalVariants": [],
+      "frontDirectionDeg": 0,
+      "orientation": {
+        "declared": "čelo směrem nahoru (pohled přímo shora)",
+        "check": {
+          "topLuminance": 81,
+          "bottomLuminance": 171.7,
+          "verdict": "tmavé zasklení nahoře – čelo nahoru"
+        },
+        "bidirectional": false
+      },
+      "physical": {
+        "lengthM": 22.4,
+        "widthM": 2.5,
+        "origin": "odvozeno z poměru stran viditelné oblasti PNG (166×1490 px) při orientační šířka tramvaje 2,5 m; skutečná délka konkrétních vozů se liší"
+      },
+      "segments": [
+        {
+          "kind": "body",
+          "fromFront": 0,
+          "toFront": 0.2725
+        },
+        {
+          "kind": "joint",
+          "fromFront": 0.2725,
+          "toFront": 0.3074
+        },
+        {
+          "kind": "body",
+          "fromFront": 0.3074,
+          "toFront": 0.455
+        },
+        {
+          "kind": "joint",
+          "fromFront": 0.455,
+          "toFront": 0.4906
+        },
+        {
+          "kind": "body",
+          "fromFront": 0.4906,
+          "toFront": 0.6678
+        },
+        {
+          "kind": "joint",
+          "fromFront": 0.6678,
+          "toFront": 0.7027
+        },
+        {
+          "kind": "body",
+          "fromFront": 0.7027,
+          "toFront": 1
+        }
+      ],
+      "sizing": {
+        "spriteFromZoom": 15.5,
+        "minScreenLengthPx": 34,
+        "maxScreenLengthPx": 560
+      },
+      "fallback": "marker"
+    },
+    {
+      "id": "train-top-bluewhite",
+      "category": "train",
+      "view": "top-down",
+      "source": {
+        "file": "assets/source/train-top-bluewhite.png",
+        "bytes": 524998,
+        "width": 887,
+        "height": 1774,
+        "format": "png",
+        "alpha": {
+          "hasAlpha": true,
+          "opaque": 236162,
+          "partial": 15260,
+          "transparent": 1322116,
+          "visibleThreshold": 16
+        },
+        "visibleRect": {
+          "x": 370,
+          "y": 18,
+          "width": 147,
+          "height": 1740
+        }
+      },
+      "variants": [
+        {
+          "purpose": "map",
+          "file": "/vehicles/train-top-bluewhite.map.png",
+          "width": 83,
+          "height": 960,
+          "pixelRatio": 2,
+          "bytes": 214777
+        }
+      ],
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "directionalVariants": [],
+      "frontDirectionDeg": 0,
+      "orientation": {
+        "declared": "čelo směrem nahoru (pohled přímo shora)",
+        "check": {
+          "topLuminance": 117.3,
+          "bottomLuminance": 92.2,
+          "verdict": "obousměrná jednotka – kabiny na obou koncích, čelo určuje deklarace dodavatele"
+        },
+        "bidirectional": true
+      },
+      "physical": {
+        "lengthM": 35.5,
+        "widthM": 3,
+        "origin": "odvozeno z poměru stran viditelné oblasti PNG (147×1740 px) při orientační šířka železničního vozu 3,0 m; skutečná délka konkrétních vozů se liší"
+      },
+      "segments": [
+        {
+          "kind": "body",
+          "fromFront": 0,
+          "toFront": 0.3385
+        },
+        {
+          "kind": "joint",
+          "fromFront": 0.3385,
+          "toFront": 0.3529
+        },
+        {
+          "kind": "body",
+          "fromFront": 0.3529,
+          "toFront": 0.6345
+        },
+        {
+          "kind": "joint",
+          "fromFront": 0.6345,
+          "toFront": 0.6471
+        },
+        {
+          "kind": "body",
+          "fromFront": 0.6471,
+          "toFront": 1
+        }
+      ],
+      "sizing": {
+        "spriteFromZoom": 15.5,
+        "minScreenLengthPx": 34,
+        "maxScreenLengthPx": 560
+      },
+      "fallback": "marker"
+    },
+    {
+      "id": "tram-oblique-redwhite",
+      "category": "tram",
+      "view": "oblique",
+      "source": {
+        "file": "assets/source/tram-oblique-redwhite.png",
+        "bytes": 1880799,
+        "width": 1536,
+        "height": 1024,
+        "format": "png",
+        "alpha": {
+          "hasAlpha": true,
+          "opaque": 469610,
+          "partial": 40870,
+          "transparent": 1062384,
+          "visibleThreshold": 16
+        },
+        "visibleRect": {
+          "x": 22,
+          "y": 24,
+          "width": 1494,
+          "height": 963
+        }
+      },
+      "variants": [
+        {
+          "purpose": "detail",
+          "file": "/vehicles/tram-oblique-redwhite.detail.webp",
+          "width": 1200,
+          "height": 775,
+          "pixelRatio": 1,
+          "bytes": 116930
+        }
+      ],
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "directionalVariants": [],
+      "note": "Šikmý nadhled – jen pro detailové karty. Jediný šikmý obrázek nelze otáčením převést na směrové pohledy na mapě."
+    },
+    {
+      "id": "tram-oblique-redwhite-alt",
+      "category": "tram",
+      "view": "oblique",
+      "source": {
+        "file": "assets/source/tram-oblique-redwhite-alt.png",
+        "bytes": 1870767,
+        "width": 1536,
+        "height": 1024,
+        "format": "png",
+        "alpha": {
+          "hasAlpha": true,
+          "opaque": 470897,
+          "partial": 31522,
+          "transparent": 1070445,
+          "visibleThreshold": 16
+        },
+        "visibleRect": {
+          "x": 29,
+          "y": 27,
+          "width": 1490,
+          "height": 961
+        }
+      },
+      "variants": [
+        {
+          "purpose": "detail",
+          "file": "/vehicles/tram-oblique-redwhite-alt.detail.webp",
+          "width": 1200,
+          "height": 775,
+          "pixelRatio": 1,
+          "bytes": 121196
+        }
+      ],
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "directionalVariants": [],
+      "note": "Šikmý nadhled – jen pro detailové karty. Jediný šikmý obrázek nelze otáčením převést na směrové pohledy na mapě."
+    },
+    {
+      "id": "tram-oblique-bluewhite",
+      "category": "tram",
+      "view": "oblique",
+      "source": {
+        "file": "assets/source/tram-oblique-bluewhite.png",
+        "bytes": 1889702,
+        "width": 1536,
+        "height": 1024,
+        "format": "png",
+        "alpha": {
+          "hasAlpha": true,
+          "opaque": 458189,
+          "partial": 42361,
+          "transparent": 1072314,
+          "visibleThreshold": 16
+        },
+        "visibleRect": {
+          "x": 14,
+          "y": 4,
+          "width": 1508,
+          "height": 1001
+        }
+      },
+      "variants": [
+        {
+          "purpose": "detail",
+          "file": "/vehicles/tram-oblique-bluewhite.detail.webp",
+          "width": 1200,
+          "height": 798,
+          "pixelRatio": 1,
+          "bytes": 128566
+        }
+      ],
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "directionalVariants": [],
+      "note": "Šikmý nadhled – jen pro detailové karty. Jediný šikmý obrázek nelze otáčením převést na směrové pohledy na mapě."
+    },
+    {
+      "id": "train-oblique-bluewhite",
+      "category": "train",
+      "view": "oblique",
+      "source": {
+        "file": "assets/source/train-oblique-bluewhite.png",
+        "bytes": 953471,
+        "width": 1774,
+        "height": 887,
+        "format": "png",
+        "alpha": {
+          "hasAlpha": true,
+          "opaque": 379986,
+          "partial": 38041,
+          "transparent": 1155511,
+          "visibleThreshold": 16
+        },
+        "visibleRect": {
+          "x": 19,
+          "y": 58,
+          "width": 1733,
+          "height": 790
+        }
+      },
+      "variants": [
+        {
+          "purpose": "detail",
+          "file": "/vehicles/train-oblique-bluewhite.detail.webp",
+          "width": 1200,
+          "height": 549,
+          "pixelRatio": 1,
+          "bytes": 82126
+        }
+      ],
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "directionalVariants": [],
+      "note": "Šikmý nadhled – jen pro detailové karty. Jediný šikmý obrázek nelze otáčením převést na směrové pohledy na mapě."
+    }
+  ]
+}

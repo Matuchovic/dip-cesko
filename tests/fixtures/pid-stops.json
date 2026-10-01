@@ -1,0 +1,18 @@
+{
+  "generatedAt": "2026-10-01T04:15:00+02:00",
+  "dataFormatVersion": "fixture",
+  "stopGroups": [
+    { "name": "Anděl", "districtCode": "AB", "idosName": "Anděl", "uniqueName": "Anděl", "node": 1040, "avgLat": 50.0712, "avgLon": 14.4036, "municipality": "Praha", "mainTrafficType": "metro",
+      "stops": [
+        { "id": "1040/1", "platform": "A", "altIdosName": "Anděl (ul. Plzeňská)", "lat": 50.07193, "lon": 14.40363, "lines": [{ "id": 9, "name": "9", "type": "tram", "isNight": false, "direction": "Sídliště Řepy" }] },
+        { "id": "1040/2", "platform": "B", "altIdosName": "Anděl (ul. Plzeňská)", "lat": 50.0719528, "lon": 14.4028063, "lines": [{ "id": 9, "name": "9", "type": "tram", "isNight": false, "direction": "Spojovací" }] },
+        { "id": "1040/11", "platform": "K", "altIdosName": "Anděl", "lat": 50.0717354, "lon": 14.4019508, "lines": [{ "id": 176, "name": "176", "type": "bus", "isNight": false, "direction": "Karlovo náměstí" }] },
+        { "id": "1040/101", "platform": "M1", "altIdosName": "Anděl", "lat": 50.06953, "lon": 14.4035711, "lines": [{ "id": 991, "name": "B", "type": "metro", "isNight": false, "direction": "Zličín" }] }
+      ] },
+    { "name": "Můstek", "districtCode": "AB", "idosName": "Můstek", "uniqueName": "Můstek", "node": 1072, "avgLat": 50.0835, "avgLon": 14.4245, "municipality": "Praha", "mainTrafficType": "metro",
+      "stops": [ { "id": "1072/101", "platform": "M1", "lat": 50.08312, "lon": 14.42496, "lines": [{ "id": 991, "name": "A", "type": "metro", "isNight": false, "direction": "Depo Hostivař" }] } ] },
+    { "name": "Chrášťany", "districtCode": "RA", "isTrain": true, "idosName": "Chrášťany", "uniqueName": "Chrášťany", "node": 9520, "avgLat": 50.1428, "avgLon": 13.6631536, "municipality": "Chrášťany",
+      "stops": [ { "id": "9520/301", "platform": "1", "lat": 50.1428, "lon": 13.6631536, "lines": [] } ] },
+    { "name": "bez souřadnic", "stops": [] }
+  ]
+}
