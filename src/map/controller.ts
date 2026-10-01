@@ -57,6 +57,8 @@ export class MapController {
   private follow = false;
   private raf = 0;
   private lastPush = 0;
+  private lastLiveData = 0;
+  private liveDirty = true;
   private last3d = 0;
   private lastSelEmit = 0;
   private ready = false;
@@ -167,7 +169,7 @@ export class MapController {
         paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 2.5, 12.5, 5], 'circle-color': modeColor, 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 1.2, 'circle-opacity': freshOpacity, 'circle-stroke-opacity': freshOpacity } },
       { id: 'dop-ov-cluster', type: 'symbol', source: OV, maxzoom: LIVE_ZOOM, filter: ['has', 'point_count'], layout: { 'icon-image': ['concat', 'c|', ['to-string', ['get', 'point_count']]], 'icon-allow-overlap': true } },
       { id: 'dop-halo', type: 'circle', source: LIVE, minzoom: LIVE_ZOOM, filter: ['==', ['get', 'id'], ''],
-        paint: { 'circle-radius': ['interpolate', ['exponential', 2], ['zoom'], 12.5, 14, 16, 26, 19, 110, 21, 380], 'circle-color': '#7B4DFF', 'circle-opacity': 0.14, 'circle-stroke-color': '#7B4DFF', 'circle-stroke-width': 2, 'circle-stroke-opacity': 0.55, 'circle-pitch-alignment': 'map' } },
+        paint: { 'circle-radius': ['interpolate', ['exponential', 2], ['zoom'], 12.5, 14, 16, 26, 19, 110, 21, 380], 'circle-color': '#2F6FB5', 'circle-opacity': 0.14, 'circle-stroke-color': '#2F6FB5', 'circle-stroke-width': 2, 'circle-stroke-opacity': 0.55, 'circle-pitch-alignment': 'map' } },
       { id: 'dop-dot', type: 'circle', source: LIVE, minzoom: LIVE_ZOOM, maxzoom: SPRITE_ZOOM,
         paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 12.5, 5, 15.5, 7.5], 'circle-color': modeColor, 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 1.6, 'circle-opacity': freshOpacity, 'circle-stroke-opacity': freshOpacity } },
       { id: 'dop-marker', type: 'circle', source: LIVE, minzoom: SPRITE_ZOOM, filter: ['==', ['get', 'sprite'], false],
@@ -224,7 +226,8 @@ export class MapController {
   private getNet = (kind: TrackKind): TrackNetwork | null => {
     if (!this.ready || this.map.getZoom() < 13) return null;
     const c = this.nets.get(kind), now = Date.now();
-    if (c && (c.version === this.netVersion || now - c.at < 1500)) return c.net;
+    // síť se staví z načtených dlaždic jen v klidu (ne při každém posunu) – plynulost na mobilu
+    if (c && (c.version === this.netVersion || now - c.at < 2500 || (this.map.isMoving() && c.net))) return c.net;
     const net = this.buildNet(kind);
     this.nets.set(kind, { net, at: now, version: this.netVersion });
     return net;
@@ -295,7 +298,7 @@ export class MapController {
   // ---------- data a vykreslení ----------
   /** Nová dávka dat ze serveru: oddělená od animace, React se nepřekresluje. */
   ingest(list: VehicleState[], receivedAt: number) {
-    this.vehicles = new Map(list.map((v) => [v.id, v]));
+    this.vehicles = new Map(list.map((v) => [v.id, v])); this.liveDirty = true;
     this.follower.update(list, receivedAt, Date.now(), this.getNet);
     if (this.selectedId && !this.vehicles.has(this.selectedId)) { this.selectedId = null; this.applySelectionFilter(); this.setFollow(false); this.events.onSelect(null, 'expired'); }
     this.pushOverview();
@@ -397,7 +400,8 @@ export class MapController {
       if (sprite && asset && !this.pitchedMode && zoom >= SPRITE_ZOOM) pieces.push(...buildPieces(s.body, shape, asset.id, { fresh: stale ? 'stale' : 'live', sort: sel ? 1000 : 10 }));
       if (want3d && hasBody && HAS_3D.has(v.route.mode)) solids.push(...buildExtrusions(s.body, shape));
     });
-    (this.map.getSource(LIVE) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: live });
+    // štítky a body: nejvýš 10× za sekundu (3D modely se posouvají v každém snímku) – méně práce pro mapu
+    if (now - this.lastLiveData >= 100 || this.liveDirty) { (this.map.getSource(LIVE) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: live }); this.lastLiveData = now; this.liveDirty = false; }
     this.modelLayer.setVehicles(style === 'models' ? models : []);
     this.artLayer.setVehicles(style === 'models' ? arts : []);
     if (!this.pitchedMode || zoom < SPRITE_ZOOM) (this.map.getSource(PIECES) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: pieces });
@@ -455,6 +459,7 @@ export class MapController {
 
   select(id: string | null, opts: { fly?: boolean; follow?: boolean } = {}) {
     this.selectedId = id;
+    this.liveDirty = true;
     this.applySelectionFilter();
     const v = id ? this.vehicles.get(id) ?? null : null;
     this.events.onSelect(v, v ? this.freshness(v, Date.now()) : 'unknown');
@@ -545,7 +550,7 @@ export class MapController {
     } catch { /* přerušeno nebo nedostupné */ }
   }
 
-  setModes(modes: Mode[]) { this.modes = new Set(modes); this.pushOverview(); this.lastPush = 0; this.last3d = 0; this.kick(); }
+  setModes(modes: Mode[]) { this.modes = new Set(modes); this.liveDirty = true; this.pushOverview(); this.lastPush = 0; this.last3d = 0; this.kick(); }
 
   setSettings(s: MapSettings) {
     const prev = this.settings;
@@ -609,7 +614,7 @@ export class MapController {
     try {
       this.map.addLayer({ id: 'dop-subway', type: 'line', source: src.id, 'source-layer': src.layer, minzoom: 11, filter: ['==', ['get', 'subclass'], 'subway'],
         layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': '#7B4DFF', 'line-opacity': 0.5, 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 1.2, 17, 4], 'line-dasharray': [2, 1.6] } } as LayerSpecification, 'dop-stops-dot');
+        paint: { 'line-color': '#2F6FB5', 'line-opacity': 0.5, 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 1.2, 17, 4], 'line-dasharray': [2, 1.6] } } as LayerSpecification, 'dop-stops-dot');
     } catch { /* styl bez vrstvy transportation */ }
   }
 

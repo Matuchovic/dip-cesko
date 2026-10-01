@@ -7,7 +7,7 @@ export const PID_STOPS_URL = 'https://data.pid.cz/stops/json/stops.json';
 export const PID_DATA_HOST = 'data.pid.cz';
 
 const LineSchema = z.object({ id: z.union([z.string(), z.number()]).nullish(), name: z.string(), type: z.string().nullish(), isNight: z.boolean().nullish(), direction: z.string().nullish() });
-const StopSchema = z.object({ id: z.string(), platform: z.string().nullish(), altIdosName: z.string().nullish(), lat: z.number(), lon: z.number(), lines: z.array(LineSchema).nullish() });
+const StopSchema = z.object({ id: z.string(), platform: z.string().nullish(), altIdosName: z.string().nullish(), lat: z.number(), lon: z.number(), lines: z.array(LineSchema).nullish(), gtfsIds: z.array(z.string()).nullish() });
 const GroupSchema = z.object({
   name: z.string(), uniqueName: z.string().nullish(), idosName: z.string().nullish(), municipality: z.string().nullish(),
   avgLat: z.number(), avgLon: z.number(), mainTrafficType: z.string().nullish(), isTrain: z.boolean().nullish(), stops: z.array(StopSchema).default([]),
@@ -43,7 +43,7 @@ export function buildStopIndex(raw: unknown): StopIndex {
     if (!key || keys.has(key)) continue;
     const platforms: StopPoint[] = g.data.stops.map((s) => {
       const lines = (s.lines ?? []).map((l) => ({ name: l.name, mode: trafficMode(l.type), direction: l.direction ?? null, isNight: l.isNight === true }));
-      return { id: nsId('pid', 'stop', s.id), groupKey: key, name: g.data.name, platform: s.platform ?? null, lat: s.lat, lon: s.lon, modes: [...new Set(lines.map((l) => l.mode))], lines };
+      return { id: nsId('pid', 'stop', s.id), groupKey: key, name: g.data.name, platform: s.platform ?? null, lat: s.lat, lon: s.lon, modes: [...new Set(lines.map((l) => l.mode))], lines, gtfsIds: (s.gtfsIds ?? []).slice(0, 8) };
     });
     const modes = [...new Set(platforms.flatMap((p) => p.modes))];
     if (!modes.length) modes.push(g.data.isTrain ? 'train' : trafficMode(g.data.mainTrafficType));

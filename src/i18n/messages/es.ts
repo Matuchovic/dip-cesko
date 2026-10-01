@@ -4,7 +4,7 @@ const n = (p: P) => Number(p.n ?? 0);
 const L = 'es';
 
 export const es: Messages = {
-  appName: 'Transporte', appTagline: 'Toda Chequia', skip: 'Saltar al contenido', brandAria: 'Transporte – toda Chequia, mapa', navMain: 'Navegación principal',
+  appName: 'DopravaČR', appTagline: 'encuentra tu conexión, cuando y donde quieras', skip: 'Saltar al contenido', brandAria: 'DopravaČR – mapa', navMain: 'Navegación principal',
   nav_map: 'Mapa', nav_plan: 'Rutas', nav_departures: 'Salidas', nav_favorites: 'Favoritos', nav_tickets: 'Billetes', nav_settings: 'Ajustes',
   mapRegion: 'Mapa de transporte', panelMap: 'Panel del mapa', panelContent: 'Contenido', sheetCollapse: 'Contraer panel', sheetExpand: 'Expandir panel',
   vehicleDetail: 'Detalle del vehículo', stopDetail: 'Detalle de la parada', searchPrompt: '¿Adónde quieres ir?',
@@ -62,7 +62,7 @@ export const es: Messages = {
   set_vehicles: 'Vehículos en el mapa', set_sprites: 'Imágenes de vehículos', set_markers: 'Marcadores simples', set_models: 'Modelos 3D', set_buildings: 'Edificios 3D', set_buildingsHint: 'En la vista inclinada; desactívalo en dispositivos lentos.', set_stops: 'Paradas en el mapa', set_stopsHint: 'Desde el zoom de calle.',
   set_reset: 'Restablecer', set_clearFav: 'Borrar favoritos', set_clearConfirm: '¿Seguro que quieres borrar todos los favoritos de este dispositivo?', set_about: 'Sobre los datos',
   set_aboutText: 'Mapa: © colaboradores de OpenStreetMap, OpenMapTiles, OpenFreeMap. Transporte: ROPID / PID (CC BY 4.0), Golemio API. Tu ubicación solo se usa para mostrar lo cercano y planificar rutas; no se guarda ni se registra.',
-  set_status: 'Estado de las fuentes de datos', set_tickets: 'Billetes',
+  set_status: 'Estado de las fuentes de datos', set_tickets: 'Billetes', set_app: 'Aplicación', set_install: 'Instalar la app', set_installIos: 'En iPhone: Compartir → Añadir a pantalla de inicio.', set_installed: 'La app está instalada.',
   st_title: 'Estado de los datos', st_error: 'No se pudo cargar el estado del servidor.', st_demo: 'El servidor funciona en modo de demostración.', st_notConnected: 'No conectado', st_connectedNoLoad: 'Conectado · aún sin cargar en este servidor', st_lastOk: 'Última carga correcta {age}',
   st_active: 'activo', st_inactive: 'inactivo', st_basemapBrowser: 'Mapa base (en este navegador)', st_loaded: 'Cargado', st_fallback: 'No disponible: mapa simplificado', st_vehiclesBrowser: 'Posiciones de vehículos (en este navegador)', st_state: 'Estado: {s}',
   st_tracks: 'Vehículos ajustados a la red: {on} de {all}', st_modes: 'Vehículos en servicio: {list}', st_footer: 'El diagnóstico detallado solo está disponible para administradores (endpoint protegido).',

@@ -7,8 +7,10 @@ export const KIND_BY_MODE: Partial<Record<Mode, TrackKind>> = { tram: 'tram', tr
 const SNAP_RADIUS: Record<TrackKind, number> = { tram: 28, rail: 45, road: 30, subway: 60 };
 /** Plynulý přechod na novou předpověď (bez skoků). */
 const BLEND_MS = 1200;
-/** Nejdéle dopočítávaná doba od posledního měření. */
-const MAX_PREDICT_S = 45;
+/** Nejdéle dopočítávaná doba od posledního měření (data chodí po 3 s, delší odhad by se rozcházel s realitou). */
+const MAX_PREDICT_S = 20;
+/** Rozestup vozidel ve frontě na zastávce (m). */
+const QUEUE_GAP_M = 4;
 
 interface Follow {
   trail: LngLat[]; blend: LngLat[]; blendLen: number; blendStart: number; blendDur: number;
@@ -31,6 +33,9 @@ export class TrackFollower {
   private follows = new Map<string, Follow>();
   private meta = new Map<string, { speed: number | null; state: PositionState }>();
   private stops: LngLat[] = [];
+  /** Fronty na zastávkách: klíč zastávky+směru → vozidlo → vzdálenost k zastávce (m). Vozidla se tak nepřekrývají. */
+  private queues = new Map<string, Map<string, number>>();
+  private queueOf = new Map<string, string>();
 
   constructor(private readonly bodyLength: (mode: Mode) => number, animator?: VehicleAnimator) {
     this.animator = animator ?? new VehicleAnimator();
@@ -45,7 +50,7 @@ export class TrackFollower {
     this.animator.ingest(list, receivedAt, now);
     const present = new Set<string>(list.map((v) => v.id));
     for (const id of [...this.follows.keys()]) if (!present.has(id)) this.follows.delete(id);
-    for (const id of [...this.meta.keys()]) if (!present.has(id)) this.meta.delete(id);
+    for (const id of [...this.meta.keys()]) if (!present.has(id)) { this.meta.delete(id); this.leaveQueue(id); }
     for (const v of list) {
       this.meta.set(v.id, { speed: v.speedMps, state: v.positionState });
       this.place(v.id, v.route.mode, now, net, before.get(v.id) ?? null, false);
@@ -58,6 +63,15 @@ export class TrackFollower {
       const mode = this.animator.mode(id);
       if (mode) this.place(id, mode, now, net, null, true);
     }
+  }
+
+  private leaveQueue(id: string) {
+    const k = this.queueOf.get(id);
+    if (!k) return;
+    const q = this.queues.get(k);
+    q?.delete(id);
+    if (q && !q.size) this.queues.delete(k);
+    this.queueOf.delete(id);
   }
 
   private dp(f: Follow, t: number): number {
@@ -97,12 +111,27 @@ export class TrackFollower {
     if (m?.state === 'at_stop' || m?.state === 'before_track' || m?.state === 'canceled') v = 0;
     const forward = network.walk(E, dir, Math.min(1500, Math.max(60, v * MAX_PREDICT_S + 40)));
     const forwardLen = polyLength(forward);
-    let stopAt = forwardLen;
-    if (v > 0) for (const s of this.stops) {
+    // nejbližší zastávka před vozidlem (nebo ta, na které právě stojí) – předpověď na ní skončí, za vozidly ve frontě
+    let stopAt = forwardLen, stopKey: string | null = null, stopDist = 0;
+    for (const s of this.stops) {
       if (Math.abs(s.lat - E.point.lat) > 0.015 || Math.abs(s.lng - E.point.lng) > 0.025) continue;
       const pr = projectOnPolyline(forward, s);
-      if (pr.dist <= 18 && pr.along > 15 && pr.along - 4 < stopAt) stopAt = pr.along - 4;
+      if (pr.dist > 18) continue;
+      const along = pr.along <= 0.5 && distM(E.point, s) < 20 ? 0 : pr.along; // stojí na ní
+      if (along < 0 || (along > 0 && along < 12) || along - 4 >= stopAt) continue;
+      stopAt = Math.max(0, along - 4);
+      stopKey = `${kind}:${s.lng.toFixed(5)},${s.lat.toFixed(5)}:${Math.round(((dir % 360) + 360) % 360 / 60) % 6}`;
+      stopDist = along;
     }
+    this.leaveQueue(id);
+    if (stopKey) {
+      const q = this.queues.get(stopKey) ?? new Map<string, number>();
+      let ahead = 0;
+      for (const [other, d] of q) if (other !== id && d <= stopDist) ahead++;
+      q.set(id, stopDist); this.queues.set(stopKey, q); this.queueOf.set(id, stopKey);
+      stopAt = Math.max(0, stopAt - ahead * (L + QUEUE_GAP_M));
+    }
+    if (v <= 0) stopAt = 0;
     const base = { forward, tm, v, stopAt: Math.max(0, stopAt), E: E.point, dir };
     if (!f || !prev || !prev.onTrack || raw.jumped || force) {
       const trail = network.walk(E, (dir + 180) % 360, L + 25).reverse();

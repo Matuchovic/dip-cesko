@@ -120,3 +120,28 @@ describe('manifest grafiky vozidel', () => {
     }
   });
 });
+
+describe('odjezdy: spolehlivé napojení na Golemio (i pro metro)', () => {
+  const mk = () => createPidProvider({ golemioKey: 'k', cache: new SharedCache(() => Date.now()), bucket: new TokenBucket(16, 16 / 8000), stopsFile });
+  const board = { stops: [], infotexts: [], departures: [{ departure_timestamp: { predicted: new Date(Date.now() + 120_000).toISOString(), scheduled: new Date(Date.now() + 60_000).toISOString() },
+    delay: { is_available: true, minutes: 1, seconds: 60 }, route: { short_name: 'B', type: 1, is_night: false, is_regional: false, is_substitute_transport: false },
+    stop: { id: 'U1040Z101P', platform_code: 'M1' }, trip: { id: 't', headsign: 'Černý Most', direction: null, is_at_stop: false, is_canceled: false, is_wheelchair_accessible: true, is_air_conditioned: null, short_name: null } }] };
+  it('nepodporovanou kombinaci aswIds + includeMetroTrains neposílá a při chybě zkusí další způsob dotazu', async () => {
+    for (const m of ['log', 'warn', 'error'] as const) vi.spyOn(console, m).mockImplementation(() => {});
+    const urls: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (u: string | URL | Request) => {
+      const url = decodeURIComponent(String(u)); urls.push(url);
+      return url.includes('aswIds[]') ? new Response('{"error":"bad"}', { status: 400 }) : new Response(JSON.stringify(board), { status: 200 });
+    }));
+    const d = await mk().departures('Anděl', 20);
+    expect(d.meta.status).toBe('live');
+    expect(d.data.departures[0]).toMatchObject({ headsign: 'Černý Most', platform: 'M1' });
+    expect(d.data.departures[0]!.route.mode).toBe('metro');
+    const asw = urls.find((x) => x.includes('aswIds[]'));
+    if (asw) expect(asw).not.toContain('includeMetroTrains');
+    const byName = urls.find((x) => x.includes('names[]'))!;
+    expect(byName).toContain('names[]=Anděl');
+    expect(byName).toContain('includeMetroTrains=true');
+    vi.unstubAllGlobals();
+  });
+});

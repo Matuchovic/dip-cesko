@@ -4,7 +4,7 @@ const n = (p: P) => Number(p.n ?? 0);
 const L = 'de';
 
 export const de: Messages = {
-  appName: 'Verkehr', appTagline: 'Ganz Tschechien', skip: 'Zum Inhalt springen', brandAria: 'Verkehr – ganz Tschechien, Karte', navMain: 'Hauptnavigation',
+  appName: 'DopravaČR', appTagline: 'finde deine Verbindung – jederzeit, überall', skip: 'Zum Inhalt springen', brandAria: 'DopravaČR – Karte', navMain: 'Hauptnavigation',
   nav_map: 'Karte', nav_plan: 'Verbindungen', nav_departures: 'Abfahrten', nav_favorites: 'Favoriten', nav_tickets: 'Fahrkarten', nav_settings: 'Einstellungen',
   mapRegion: 'Verkehrskarte', panelMap: 'Kartenleiste', panelContent: 'Inhalt', sheetCollapse: 'Leiste einklappen', sheetExpand: 'Leiste ausklappen',
   vehicleDetail: 'Fahrzeugdetails', stopDetail: 'Haltestellendetails', searchPrompt: 'Wohin möchten Sie?',
@@ -62,7 +62,7 @@ export const de: Messages = {
   set_vehicles: 'Fahrzeuge auf der Karte', set_sprites: 'Fahrzeugbilder', set_markers: 'Einfache Markierungen', set_models: '3D-Modelle', set_buildings: '3D-Gebäude', set_buildingsHint: 'In der geneigten Ansicht; auf schwächeren Geräten ausschalten.', set_stops: 'Haltestellen auf der Karte', set_stopsHint: 'Ab Straßenzoom.',
   set_reset: 'Standard wiederherstellen', set_clearFav: 'Favoriten löschen', set_clearConfirm: 'Wirklich alle Favoriten auf diesem Gerät löschen?', set_about: 'Über die Daten',
   set_aboutText: 'Karte: © OpenStreetMap-Mitwirkende, OpenMapTiles, OpenFreeMap. Verkehr: ROPID / PID (CC BY 4.0), Golemio API. Ihr Standort dient nur zur Anzeige der Umgebung und zur Verbindungssuche; er wird weder gespeichert noch protokolliert.',
-  set_status: 'Status der Datenquellen', set_tickets: 'Fahrkarten',
+  set_status: 'Status der Datenquellen', set_tickets: 'Fahrkarten', set_app: 'App', set_install: 'App installieren', set_installIos: 'Auf dem iPhone: Teilen → Zum Home-Bildschirm.', set_installed: 'Die App ist installiert.',
   st_title: 'Datenstatus', st_error: 'Der Serverstatus konnte nicht geladen werden.', st_demo: 'Der Server läuft im Demomodus.', st_notConnected: 'Nicht verbunden', st_connectedNoLoad: 'Verbunden · auf diesem Server noch nicht geladen', st_lastOk: 'Zuletzt erfolgreich geladen {age}',
   st_active: 'aktiv', st_inactive: 'inaktiv', st_basemapBrowser: 'Grundkarte (in diesem Browser)', st_loaded: 'Geladen', st_fallback: 'Nicht verfügbar – vereinfachte Karte', st_vehiclesBrowser: 'Fahrzeugpositionen (in diesem Browser)', st_state: 'Status: {s}',
   st_tracks: 'Am Netz eingerastete Fahrzeuge: {on} von {all}', st_modes: 'Fahrzeuge im Einsatz: {list}', st_footer: 'Detaillierte Diagnose nur für Administratoren (geschützter Endpunkt).',

@@ -4,7 +4,7 @@ const n = (p: P) => Number(p.n ?? 0);
 const L = 'uk';
 
 export const uk: Messages = {
-  appName: 'Транспорт', appTagline: 'Уся Чехія', skip: 'Перейти до вмісту', brandAria: 'Транспорт – уся Чехія, мапа', navMain: 'Головна навігація',
+  appName: 'DopravaČR', appTagline: 'знайди своє сполучення будь-коли й будь-де', skip: 'Перейти до вмісту', brandAria: 'DopravaČR – мапа', navMain: 'Головна навігація',
   nav_map: 'Мапа', nav_plan: 'Маршрути', nav_departures: 'Відправлення', nav_favorites: 'Обране', nav_tickets: 'Квитки', nav_settings: 'Налаштування',
   mapRegion: 'Мапа транспорту', panelMap: 'Панель мапи', panelContent: 'Вміст', sheetCollapse: 'Згорнути панель', sheetExpand: 'Розгорнути панель',
   vehicleDetail: 'Деталі транспортного засобу', stopDetail: 'Деталі зупинки', searchPrompt: 'Куди вам потрібно?',
@@ -62,7 +62,7 @@ export const uk: Messages = {
   set_vehicles: 'Транспорт на мапі', set_sprites: 'Зображення транспорту', set_markers: 'Прості позначки', set_models: '3D-моделі', set_buildings: '3D-будівлі', set_buildingsHint: 'У нахиленому вигляді; на слабших пристроях вимкніть.', set_stops: 'Зупинки на мапі', set_stopsHint: 'Від масштабу рівня вулиць.',
   set_reset: 'Відновити типові', set_clearFav: 'Видалити обране', set_clearConfirm: 'Справді видалити все обране на цьому пристрої?', set_about: 'Про дані',
   set_aboutText: 'Мапа: © учасники OpenStreetMap, OpenMapTiles, OpenFreeMap. Транспорт: ROPID / PID (CC BY 4.0), Golemio API. Ваше місцезнаходження використовується лише для показу околиць і пошуку маршрутів; воно не зберігається й не записується в журнали.',
-  set_status: 'Стан джерел даних', set_tickets: 'Квитки',
+  set_status: 'Стан джерел даних', set_tickets: 'Квитки', set_app: 'Застосунок', set_install: 'Встановити застосунок', set_installIos: 'На iPhone: Поділитися → На початковий екран.', set_installed: 'Застосунок встановлено.',
   st_title: 'Стан даних', st_error: 'Не вдалося завантажити стан сервера.', st_demo: 'Сервер працює в демонстраційному режимі.', st_notConnected: 'Не підключено', st_connectedNoLoad: 'Підключено · на цьому сервері ще не завантажено', st_lastOk: 'Останнє успішне завантаження {age}',
   st_active: 'активне', st_inactive: 'неактивне', st_basemapBrowser: 'Базова мапа (у цьому браузері)', st_loaded: 'Завантажено', st_fallback: 'Недоступна – спрощена мапа', st_vehiclesBrowser: 'Позиції транспорту (у цьому браузері)', st_state: 'Стан: {s}',
   st_tracks: 'Транспорт, прив’язаний до мережі: {on} з {all}', st_modes: 'Транспорт на лінії: {list}', st_footer: 'Детальна діагностика доступна лише адміністраторам (захищена кінцева точка).',

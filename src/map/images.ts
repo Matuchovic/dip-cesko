@@ -28,9 +28,9 @@ export function badgeImage(line: string, mode: Mode, state: 'live' | 'stale' | '
   roundRect(ctx, border / 2, border / 2, w - border, h - border, 7 * s);
   ctx.fillStyle = state === 'stale' ? '#8D8A9C' : MODE_COLOR[mode];
   ctx.fill();
-  ctx.lineWidth = border; ctx.strokeStyle = state === 'selected' ? '#7B4DFF' : '#FFFFFF'; ctx.stroke();
+  ctx.lineWidth = border; ctx.strokeStyle = state === 'selected' ? '#2F6FB5' : '#FFFFFF'; ctx.stroke();
   ctx.beginPath(); ctx.moveTo(w / 2 - 5 * s, h - border); ctx.lineTo(w / 2, h + 5 * s); ctx.lineTo(w / 2 + 5 * s, h - border); ctx.closePath();
-  ctx.fillStyle = state === 'selected' ? '#7B4DFF' : '#FFFFFF'; ctx.fill();
+  ctx.fillStyle = state === 'selected' ? '#2F6FB5' : '#FFFFFF'; ctx.fill();
   ctx.fillStyle = '#FFFFFF'; ctx.font = `800 ${fontPx}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(line, w / 2, h / 2 + s);
   return read(ctx, w, h + 6 * s);
@@ -40,7 +40,7 @@ export function clusterImage(count: number): RasterImage {
   const s = 2, d = (count >= 100 ? 40 : count >= 10 ? 34 : 30) * s;
   const { ctx } = canvas(d, d);
   ctx.beginPath(); ctx.arc(d / 2, d / 2, d / 2 - 2 * s, 0, Math.PI * 2);
-  ctx.fillStyle = '#2C1260'; ctx.fill(); ctx.lineWidth = 3 * s; ctx.strokeStyle = 'rgba(255,255,255,0.92)'; ctx.stroke();
+  ctx.fillStyle = '#1C3A63'; ctx.fill(); ctx.lineWidth = 3 * s; ctx.strokeStyle = 'rgba(255,255,255,0.92)'; ctx.stroke();
   ctx.fillStyle = '#FFFFFF'; ctx.font = `800 ${13 * s}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(count > 999 ? '999+' : String(count), d / 2, d / 2 + s);
   return read(ctx, d, d);

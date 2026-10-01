@@ -7,6 +7,7 @@ import { appStore, mapApi } from '@/lib/app-state';
 import { useStore } from '@/lib/store';
 import { useMediaQuery, useNow } from '@/lib/hooks';
 import { hydrateFavorites } from '@/lib/favorites';
+import { initInstall } from '@/lib/install';
 import { hydrateSettings, prefersReducedMotion, settingsStore } from '@/lib/settings';
 import { IconClock, IconMap, IconRoute, IconSearch, IconSettings, IconStar, IconTicket } from './icons';
 import { FreshnessPill } from './ui';
@@ -47,6 +48,7 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
   useEffect(() => {
     hydrateSettings();
     hydrateFavorites();
+    initInstall();
     const apply = () => { document.documentElement.dataset.motion = prefersReducedMotion(settingsStore.get()) ? 'reduce' : 'full'; };
     apply();
     const unsub = settingsStore.subscribe(apply);
@@ -94,8 +96,10 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
       <a className="skip-link" href="#main">{t('skip')}</a>
       <header className="topbar">
         <Link href="/" className="brand" aria-label={t('brandAria')}>
-          <span className="brand-mark"><IconMap size={20} /></span>
-          <span className="brand-name">{t('appName')}<small>{t('appTagline')}</small></span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="brand-logo light" src="/brand/logo.png" alt={t('appName')} width={174} height={40} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="brand-logo dark" src="/brand/logo-dark.png" alt="" width={174} height={40} />
         </Link>
         <nav className="nav" aria-label={t('navMain')}>
           {NAV.map(({ href, label, Icon }) => <Link key={href} href={href} aria-current={pathname === href ? 'page' : undefined}><Icon size={18} />{t(label)}</Link>)}

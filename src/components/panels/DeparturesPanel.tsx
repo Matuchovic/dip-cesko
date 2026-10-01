@@ -98,7 +98,8 @@ export default function DeparturesPanel() {
           {st === 'live' && <span className="pill pill-live"><span className="pulse" aria-hidden />{t('pill_live')}</span>}
           {st === 'stale' && <span className="pill pill-stale">{t('pill_stale')}</span>}
           {st === 'demo' && <span className="pill pill-demo">{t('pill_demo')}</span>}
-          {(st === 'unavailable' || st === 'error') && <span className="pill pill-off">{t('pill_unavailable')}</span>}
+          {st === 'unavailable' && <span className="pill pill-off">{t('pill_unavailable')}</span>}
+          {st === 'error' && <span className="pill pill-error">{t('pill_error')}</span>}
           {board.meta.fetchedAt && st !== 'unavailable' && <span>{t('dep_updated', { t: formatClockSeconds(Date.parse(board.meta.fetchedAt)), age: t('ago', { s: Math.max(1, (now - Date.parse(board.meta.fetchedAt)) / 1000) }) })}</span>}
           {loading && <span aria-hidden>· {t('dep_loading')}</span>}
           <span className="seg" role="group" aria-label={t('dep_title')}>

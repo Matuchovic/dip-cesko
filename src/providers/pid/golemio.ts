@@ -169,8 +169,14 @@ export function vehiclePositionsUrl(): string {
   return `${GOLEMIO_BASE}/v2/vehiclepositions?limit=10000&includeNotTracking=true&preferredTimezone=Europe%2FPrague`;
 }
 
-export function departureBoardUrl(aswIds: string[], limit: number): string {
-  const p = new URLSearchParams({ minutesBefore: '0', minutesAfter: '120', limit: String(limit), preferredTimezone: 'Europe/Prague', includeMetroTrains: 'true', airCondition: 'true', mode: 'departures', order: 'real' });
-  for (const id of aswIds.slice(0, 20)) p.append('aswIds[]', id);
+export type BoardQuery = { by: 'ids' | 'aswIds' | 'names'; values: string[] };
+/**
+ * Odjezdová tabule Golemio. Podle OpenAPI @golemio/pid: `includeMetroTrains` platí jen s `names`
+ * a s `aswIds` není podporován (pid#222) – proto ho posíláme pouze u dotazu podle názvu.
+ */
+export function departureBoardUrl(q: BoardQuery, limit: number): string {
+  const p = new URLSearchParams({ minutesBefore: '0', minutesAfter: '120', limit: String(Math.min(1000, limit)), preferredTimezone: 'Europe/Prague', airCondition: 'true', mode: 'departures', order: 'real' });
+  if (q.by === 'names') p.set('includeMetroTrains', 'true');
+  for (const v of q.values.slice(0, 40)) p.append(`${q.by}[]`, v);
   return `${GOLEMIO_BASE}/v2/pid/departureboards?${p.toString()}`;
 }

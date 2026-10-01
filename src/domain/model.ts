@@ -61,6 +61,8 @@ export interface StopPoint {
   lon: number;
   modes: Mode[];
   lines: { name: string; mode: Mode; direction: string | null; isNight: boolean }[];
+  /** GTFS stop_id nástupiště (pro odjezdové tabule – spolehlivé i pro metro). */
+  gtfsIds?: string[];
 }
 
 export interface StopGroup {

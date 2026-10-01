@@ -4,7 +4,7 @@ const n = (p: P) => Number(p.n ?? 0);
 const L = 'en';
 
 export const en: Messages = {
-  appName: 'Transit', appTagline: 'All of Czechia', skip: 'Skip to content', brandAria: 'Transit – All of Czechia, map', navMain: 'Main navigation',
+  appName: 'DopravaČR', appTagline: 'find your connection, anytime, anywhere', skip: 'Skip to content', brandAria: 'DopravaČR – map', navMain: 'Main navigation',
   nav_map: 'Map', nav_plan: 'Journeys', nav_departures: 'Departures', nav_favorites: 'Favourites', nav_tickets: 'Tickets', nav_settings: 'Settings',
   mapRegion: 'Transit map', panelMap: 'Map panel', panelContent: 'Content', sheetCollapse: 'Collapse panel', sheetExpand: 'Expand panel',
   vehicleDetail: 'Vehicle details', stopDetail: 'Stop details', searchPrompt: 'Where do you want to go?',
@@ -62,7 +62,7 @@ export const en: Messages = {
   set_vehicles: 'Vehicles on the map', set_sprites: 'Vehicle images', set_markers: 'Simple markers', set_models: '3D models', set_buildings: '3D buildings', set_buildingsHint: 'In tilted view; turn off on slower devices.', set_stops: 'Stops on the map', set_stopsHint: 'From street-level zoom.',
   set_reset: 'Restore defaults', set_clearFav: 'Delete favourites', set_clearConfirm: 'Really delete all favourites on this device?', set_about: 'About the data',
   set_aboutText: 'Map: © OpenStreetMap contributors, OpenMapTiles, OpenFreeMap. Transit: ROPID / PID (CC BY 4.0), Golemio API. Your location is used only to show what is nearby and to plan journeys; it is not stored or logged.',
-  set_status: 'Data source status', set_tickets: 'Tickets',
+  set_status: 'Data source status', set_tickets: 'Tickets', set_app: 'App', set_install: 'Install app', set_installIos: 'On iPhone: Share → Add to Home Screen.', set_installed: 'The app is installed.',
   st_title: 'Data status', st_error: 'Server status could not be loaded.', st_demo: 'The server is running in demo mode.', st_notConnected: 'Not connected', st_connectedNoLoad: 'Connected · not loaded on this server yet', st_lastOk: 'Last successful load {age}',
   st_active: 'active', st_inactive: 'inactive', st_basemapBrowser: 'Base map (in this browser)', st_loaded: 'Loaded', st_fallback: 'Unavailable – simplified map', st_vehiclesBrowser: 'Vehicle positions (in this browser)', st_state: 'State: {s}',
   st_tracks: 'Vehicles snapped to the network: {on} of {all}', st_modes: 'Vehicles in service: {list}', st_footer: 'Detailed diagnostics are available to administrators only (protected endpoint).',

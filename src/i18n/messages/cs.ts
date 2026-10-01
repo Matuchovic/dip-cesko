@@ -5,7 +5,7 @@ const n = (p: P) => Number(p.n ?? 0);
 const L = 'cs';
 
 export const cs = {
-  appName: 'Doprava', appTagline: 'Celé Česko', skip: 'Přeskočit na obsah', brandAria: 'Doprava – Celé Česko, mapa', navMain: 'Hlavní navigace',
+  appName: 'DopravaČR', appTagline: 'najdi si spoj, kdykoliv, kdekoliv', skip: 'Přeskočit na obsah', brandAria: 'DopravaČR – mapa', navMain: 'Hlavní navigace',
   nav_map: 'Mapa', nav_plan: 'Spojení', nav_departures: 'Odjezdy', nav_favorites: 'Oblíbené', nav_tickets: 'Jízdenky', nav_settings: 'Nastavení',
   mapRegion: 'Mapa dopravy', panelMap: 'Panel mapy', panelContent: 'Obsah', sheetCollapse: 'Sbalit panel', sheetExpand: 'Rozbalit panel',
   vehicleDetail: 'Detail vozidla', stopDetail: 'Detail zastávky', searchPrompt: 'Kam chcete jet?',
@@ -63,7 +63,7 @@ export const cs = {
   set_vehicles: 'Vozidla na mapě', set_sprites: 'Obrázky vozidel', set_markers: 'Jednoduché značky', set_models: '3D modely', set_buildings: '3D budovy', set_buildingsHint: 'V nakloněném pohledu; na slabších zařízeních vypněte.', set_stops: 'Zastávky na mapě', set_stopsHint: 'Od přiblížení úrovně ulic.',
   set_reset: 'Obnovit výchozí', set_clearFav: 'Smazat oblíbené', set_clearConfirm: 'Opravdu smazat všechny oblíbené položky v tomto zařízení?', set_about: 'O datech',
   set_aboutText: 'Mapa: © přispěvatelé OpenStreetMap, OpenMapTiles, OpenFreeMap. Doprava: ROPID / PID (CC BY 4.0), Golemio API. Polohu zařízení používáme jen pro zobrazení okolí a hledání spojení; neukládáme ji ani nezapisujeme do logů.',
-  set_status: 'Stav datových zdrojů', set_tickets: 'Jízdenky',
+  set_status: 'Stav datových zdrojů', set_tickets: 'Jízdenky', set_app: 'Aplikace', set_install: 'Nainstalovat aplikaci', set_installIos: 'Na iPhonu: Sdílet → Přidat na plochu.', set_installed: 'Aplikace je nainstalovaná.',
   st_title: 'Stav dat', st_error: 'Stav serveru se nepodařilo načíst.', st_demo: 'Server běží v ukázkovém režimu.', st_notConnected: 'Nepřipojeno', st_connectedNoLoad: 'Připojeno · zatím bez načtení na tomto serveru', st_lastOk: 'Poslední úspěšné načtení {age}',
   st_active: 'aktivní', st_inactive: 'neaktivní', st_basemapBrowser: 'Mapový podklad (v tomto prohlížeči)', st_loaded: 'Načten', st_fallback: 'Nedostupný – zjednodušená mapa', st_vehiclesBrowser: 'Polohy vozidel (v tomto prohlížeči)', st_state: 'Stav: {s}',
   st_tracks: 'Vozidla navázaná na trať: {on} z {all}', st_modes: 'Vozidla v provozu: {list}', st_footer: 'Podrobná diagnostika je dostupná jen správcům (chráněný endpoint).',

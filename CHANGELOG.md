@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0 – 2026-10-02
+- Nová značka DopravaČR: logo v hlavičce (světlá i tmavá varianta), na mobilu v panelu se sloganem v jazyce aplikace; barvy celé aplikace podle ikony (námořnická a ocelová modrá, světlé sklo).
+- Favicon (16/32/48 px), ikony PWA „any“ i „maskable“, ikona pro iPhone, manifest se zkratkami (Odjezdy, Spojení), tlačítko „Nainstalovat aplikaci“ v Nastavení (iPhone: návod).
+- Vozidla se nepřekrývají: na zastávce se řadí do fronty za sebou (dříve se při dopočtu sjela do jednoho bodu); dopočet polohy nejvýš 20 s.
+- Plynulost: síť kolejí se přepočítává jen v klidu mapy, štítky se obnovují nejvýš 10× za sekundu, 3D modely v každém snímku.
+- Odjezdy fungují i pro stanice metra: dotaz podle GTFS id nástupišť; nepodporovaná kombinace aswIds + includeMetroTrains se už neposílá; při chybě se zkusí ASW id a pak přesný název uzlu (s metrem a vlaky). Chyba zdroje se zobrazuje jako „Data nedostupná“, ne „nepřipojena“.
+
 ## 0.4.0 – 2026-10-01
 - Reálný čas: polohy se obnovují každé 3 s (v ulicích jen pro výřez mapy, server drží data 3 s); mezi měřeními vozidlo jede po trati naměřenou rychlostí až k další zastávce (nejvýše 45 s), nové měření se napojí plynule a vozidlo nikdy necouvá kvůli zpoždění dat; dopočtená poloha je v detailu označená.
 - Skutečná velikost 3D vozidel při každém přiblížení (dříve se při oddálení zvětšovala).

@@ -62,11 +62,18 @@ describe('Golemio – odjezdová tabule', () => {
     expect(c).toMatchObject({ isCanceled: true, delay: { kind: 'known', seconds: 0 } });
     expect(r.notices).toEqual(['Výluka linky 9']);
   });
-  it('URL tabule obsahuje aswIds a časové pásmo', () => {
-    const u = new URL(departureBoardUrl(['1040_1', '1040_2'], 20));
+  it('URL tabule: GTFS id / aswIds bez includeMetroTrains, název s metrem a vlaky', () => {
+    const u = new URL(departureBoardUrl({ by: 'aswIds', values: ['1040_1', '1040_2'] }, 20));
     expect(u.host).toBe('api.golemio.cz');
     expect(u.searchParams.getAll('aswIds[]')).toEqual(['1040_1', '1040_2']);
     expect(u.searchParams.get('preferredTimezone')).toBe('Europe/Prague');
+    expect(u.searchParams.has('includeMetroTrains')).toBe(false);
+    const g = new URL(departureBoardUrl({ by: 'ids', values: ['U1072Z101P'] }, 60));
+    expect(g.searchParams.getAll('ids[]')).toEqual(['U1072Z101P']);
+    expect(g.searchParams.has('includeMetroTrains')).toBe(false);
+    const n = new URL(departureBoardUrl({ by: 'names', values: ['Můstek'] }, 60));
+    expect(n.searchParams.getAll('names[]')).toEqual(['Můstek']);
+    expect(n.searchParams.get('includeMetroTrains')).toBe('true');
   });
 });
 

@@ -4,7 +4,7 @@ const n = (p: P) => Number(p.n ?? 0);
 const L = 'ar';
 
 export const ar: Messages = {
-  appName: 'المواصلات', appTagline: 'التشيك كاملة', skip: 'تخطَّ إلى المحتوى', brandAria: 'المواصلات – التشيك كاملة، الخريطة', navMain: 'التنقل الرئيسي',
+  appName: 'DopravaČR', appTagline: 'اعثر على رحلتك في أي وقت ومن أي مكان', skip: 'تخطَّ إلى المحتوى', brandAria: 'DopravaČR – الخريطة', navMain: 'التنقل الرئيسي',
   nav_map: 'الخريطة', nav_plan: 'الرحلات', nav_departures: 'المغادرات', nav_favorites: 'المفضلة', nav_tickets: 'التذاكر', nav_settings: 'الإعدادات',
   mapRegion: 'خريطة المواصلات', panelMap: 'لوحة الخريطة', panelContent: 'المحتوى', sheetCollapse: 'طيّ اللوحة', sheetExpand: 'توسيع اللوحة',
   vehicleDetail: 'تفاصيل المركبة', stopDetail: 'تفاصيل المحطة', searchPrompt: 'إلى أين تريد الذهاب؟',
@@ -62,7 +62,7 @@ export const ar: Messages = {
   set_vehicles: 'المركبات على الخريطة', set_sprites: 'صور المركبات', set_markers: 'علامات بسيطة', set_models: 'نماذج ثلاثية الأبعاد', set_buildings: 'مبانٍ ثلاثية الأبعاد', set_buildingsHint: 'في العرض المائل؛ عطّلها على الأجهزة الأضعف.', set_stops: 'المحطات على الخريطة', set_stopsHint: 'ابتداءً من تكبير مستوى الشارع.',
   set_reset: 'استعادة الافتراضي', set_clearFav: 'حذف المفضلة', set_clearConfirm: 'هل تريد حقًا حذف كل المفضلة على هذا الجهاز؟', set_about: 'عن البيانات',
   set_aboutText: 'الخريطة: © مساهمو OpenStreetMap وOpenMapTiles وOpenFreeMap. المواصلات: ROPID / PID (CC BY 4.0) وGolemio API. يُستخدم موقعك فقط لعرض ما حولك وللتخطيط للرحلات؛ لا يُحفظ ولا يُسجَّل.',
-  set_status: 'حالة مصادر البيانات', set_tickets: 'التذاكر',
+  set_status: 'حالة مصادر البيانات', set_tickets: 'التذاكر', set_app: 'التطبيق', set_install: 'تثبيت التطبيق', set_installIos: 'على iPhone: مشاركة ← إضافة إلى الشاشة الرئيسية.', set_installed: 'التطبيق مثبت.',
   st_title: 'حالة البيانات', st_error: 'تعذّر تحميل حالة الخادم.', st_demo: 'يعمل الخادم في الوضع التجريبي.', st_notConnected: 'غير متصل', st_connectedNoLoad: 'متصل · لم يُحمَّل بعد على هذا الخادم', st_lastOk: 'آخر تحميل ناجح {age}',
   st_active: 'نشط', st_inactive: 'غير نشط', st_basemapBrowser: 'الخريطة الأساسية (في هذا المتصفح)', st_loaded: 'محمّلة', st_fallback: 'غير متاحة – خريطة مبسّطة', st_vehiclesBrowser: 'مواقع المركبات (في هذا المتصفح)', st_state: 'الحالة: {s}',
   st_tracks: 'المركبات المثبّتة على الشبكة: {on} من {all}', st_modes: 'المركبات في الخدمة: {list}', st_footer: 'التشخيص المفصّل متاح للمسؤولين فقط (نقطة نهاية محمية).',

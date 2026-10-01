@@ -162,3 +162,20 @@ describe('reálný čas: dopočet polohy po trati', () => {
     expect(after.front.lng).toBeGreaterThanOrEqual(ahead.front.lng - 1e-7);
   });
 });
+
+describe('fronta na zastávce: vozidla se nepřekrývají', () => {
+  const T0 = Date.parse('2026-10-02T00:10:00Z');
+  const line: LngLat[] = []; for (let e = -400; e <= 400; e += 10) line.push(P(e, 0));
+  const net = new TrackNetwork([line], O.lat);
+  const tram = (id: string, e: number, t: number, speed: number) => ({ ...veh(id, P(e, 0), t, 90), speedMps: speed });
+  it('tři tramvaje mířící na stejnou zastávku zastaví za sebou s rozestupem', () => {
+    const f = new TrackFollower(() => 30);
+    f.setStops([P(150, 4)]);
+    const list = [tram('a', 100, T0, 8), tram('b', 60, T0, 8), tram('c', 20, T0, 8)];
+    f.update(list, T0, T0, () => net);
+    const fronts = ['a', 'b', 'c'].map((id) => f.sample(`pid:vehicle:${id}`, T0 + 19_000)!.front);
+    expect(distM(fronts[0]!, fronts[1]!)).toBeGreaterThanOrEqual(30);
+    expect(distM(fronts[1]!, fronts[2]!)).toBeGreaterThanOrEqual(30);
+    expect(fronts[0]!.lng).toBeGreaterThan(fronts[1]!.lng);
+  });
+});

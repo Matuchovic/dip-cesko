@@ -60,6 +60,13 @@ export default function HomePanel() {
 
   return (
     <>
+      <div className="m-brand">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="brand-logo light" src="/brand/logo.png" alt={t('appName')} width={148} height={34} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="brand-logo dark" src="/brand/logo-dark.png" alt="" width={148} height={34} />
+        <small>{t('appTagline')}</small>
+      </div>
       <h1>{t('home_title')}</h1>
       <StopSearch label={t('home_stopLabel')} placeholder={t('home_placeholder')} onSelect={(g) => { if (g) { mapApi.controller?.flyTo(g.lon, g.lat, 16.5); router.push(`/odjezdy?zastavka=${encodeURIComponent(g.key)}`); } }} />
       <div className="actions" style={{ marginTop: 0 }}>
