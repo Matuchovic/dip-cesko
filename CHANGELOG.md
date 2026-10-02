@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.2 – 2026-10-02
+- Polohy vozidel z lehkého veřejného endpointu Golemio (/v2/public/vehiclepositions, celé PID ~70 kB) – rychlé i ve špičce; plný endpoint (10 000 vozidel, jednotky MB) se načítá jen na pozadí po 30 s kvůli směru, číslu vozu a zastávkám a slouží jako záloha. Ráno ve špičce se plný dotaz nestihl a mapa zůstala prázdná.
+- Chyba zdroje už nesmaže vozidla z mapy; nový pokus nejpozději za 15 s.
+- Serverové funkce běží ve Frankfurtu (blíž Golemiu v Praze), trasa poloh smí běžet až 30 s.
+
 ## 0.5.1 – 2026-10-02
 - Obrázky vozidel (PNG shora) se při velkém přiblížení už nerozpadají na části: velikost obrázku je vždy skutečná (dříve omezená na 560 px), interpolace přesně odpovídá zoomu.
 

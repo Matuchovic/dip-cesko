@@ -71,7 +71,13 @@ describe('PID adaptér', () => {
     const body = { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [14.40363, 50.07193] },
       properties: { last_position: { bearing: 90, origin_timestamp: new Date(clock - 20_000).toISOString(), delay: { actual: 0 } },
         trip: { gtfs: { route_short_name: '9', route_type: 0, trip_id: 't1' }, vehicle_registration_number: '9241' } } }] };
-    const f = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify(body), { status: 200 })).mockResolvedValue(new Response('chyba', { status: 503 }));
+    // lehký veřejný endpoint mlčí (404) → záloha na plný; první plný dotaz uspěje, pak výpadek
+    let fullOk = 1;
+    const f = vi.fn(async (u: string | URL | Request, init?: RequestInit) => {
+      void init;
+      if (String(u).includes('/v2/public/')) return new Response('nenalezeno', { status: 404 });
+      return fullOk-- > 0 ? new Response(JSON.stringify(body), { status: 200 }) : new Response('chyba', { status: 503 });
+    });
     vi.stubGlobal('fetch', f);
     const p = mk('test-key', () => clock);
     const live = await p.vehicles(null);
@@ -142,6 +148,31 @@ describe('odjezdy: spolehlivé napojení na Golemio (i pro metro)', () => {
     const byName = urls.find((x) => x.includes('names[]'))!;
     expect(byName).toContain('names[]=Anděl');
     expect(byName).toContain('includeMetroTrains=true');
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('polohy: rychlý zdroj a záloha', () => {
+  const mk = () => createPidProvider({ golemioKey: 'k', cache: new SharedCache(() => Date.now()), bucket: new TokenBucket(16, 16 / 8000), stopsFile });
+  const pub = { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [14.42, 50.08] }, properties: { gtfs_trip_id: 't1', route_type: 'tram', gtfs_route_short_name: '9', bearing: 0, delay: 0, vehicle_id: 'service-0-8500', state_position: 'on_track' } }] };
+  it('bere polohy z lehkého veřejného endpointu; když selže, použije plný', async () => {
+    for (const m of ['log', 'warn', 'error'] as const) vi.spyOn(console, m).mockImplementation(() => {});
+    let publicDown = false;
+    const urls: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (u: string | URL | Request) => {
+      const url = String(u); urls.push(url);
+      if (url.includes('/v2/public/vehiclepositions')) return publicDown ? new Response('err', { status: 503 }) : new Response(JSON.stringify(pub), { status: 200 });
+      return new Response(JSON.stringify({ type: 'FeatureCollection', features: [] }), { status: 200 });
+    }));
+    const r = await mk().vehicles(null);
+    expect(r.meta.status).toBe('live');
+    expect(r.data).toHaveLength(1);
+    expect(r.data[0]).toMatchObject({ route: { shortName: '9', mode: 'tram' }, registration: '8500' });
+    expect(urls[0]).toContain('/v2/public/vehiclepositions');
+    publicDown = true;
+    const r2 = await mk().vehicles(null);
+    expect(urls.some((x) => x.includes('/v2/vehiclepositions?limit=10000'))).toBe(true);
+    expect(r2.meta.status === 'error' || r2.data.length === 0).toBe(true); // plný zdroj v testu prázdný
     vi.unstubAllGlobals();
   });
 });

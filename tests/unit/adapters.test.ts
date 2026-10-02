@@ -171,3 +171,27 @@ describe('úplnost poloh vozidel z Golemia', () => {
     expect(out.vehicles[0]!.lon).toBeCloseTo(14.42);
   });
 });
+
+describe('lehký veřejný endpoint poloh Golemio', () => {
+  const sample = (lon: number) => ({ type: 'FeatureCollection', features: [
+    { type: 'Feature', geometry: { type: 'Point', coordinates: [lon, 50.08] }, properties: { gtfs_trip_id: '22_1_261002', route_type: 'tram', gtfs_route_short_name: '22', bearing: 90, delay: 60, vehicle_id: 'service-0-9257', state_position: 'on_track' } },
+    { type: 'Feature', geometry: { type: 'Point', coordinates: [14.43, 50.07] }, properties: { gtfs_trip_id: 'A_1', route_type: 'metro', gtfs_route_short_name: 'A', bearing: null, delay: null, vehicle_id: 'service-1-71', state_position: 'at_stop' } },
+    { type: 'Feature', geometry: { type: 'Point', coordinates: [14.44, 50.07] }, properties: { gtfs_trip_id: 'x', route_type: 'bus', gtfs_route_short_name: '135', bearing: 10, delay: 0, vehicle_id: 'service-3-1', state_position: 'canceled' } },
+  ] });
+  it('mapuje druh, linku, vůz, zpoždění a doplní směr z plného zdroje; zrušené vynechá', async () => {
+    const { mapPublicVehicles } = await import('@/providers/pid/golemio');
+    const { nsId } = await import('@/domain/ids');
+    const details = new Map([[nsId('pid', 'trip', '22_1_261002') as string, { headsign: 'Bílá Hora', registration: '9257', vehicleTypeLabel: 'tramvaj', wheelchair: true, airConditioned: true, lastStopName: 'Muzeum', nextStopName: 'I. P. Pavlova', speedMps: 8 }]]);
+    const seen = new Map<string, { lat: number; lon: number; at: number }>();
+    const T = Date.parse('2026-10-02T06:00:00Z');
+    const a = mapPublicVehicles(sample(14.42), details, seen, T).vehicles;
+    expect(a).toHaveLength(2);
+    expect(a[0]).toMatchObject({ registration: '9257', headsign: 'Bílá Hora', route: { shortName: '22', mode: 'tram' }, bearing: 90, delay: { kind: 'known', seconds: 60 } });
+    expect(a[1]).toMatchObject({ route: { mode: 'metro', shortName: 'A' }, positionState: 'at_stop', delay: { kind: 'unknown' } });
+    // stejná poloha = žádné nové měření (čas zůstane), změna polohy = nový čas
+    const b = mapPublicVehicles(sample(14.42), details, seen, T + 3000).vehicles;
+    expect(b[0]!.measuredAt).toBe(new Date(T).toISOString());
+    const c = mapPublicVehicles(sample(14.4205), details, seen, T + 6000).vehicles;
+    expect(c[0]!.measuredAt).toBe(new Date(T + 6000).toISOString());
+  });
+});

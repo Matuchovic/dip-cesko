@@ -6,6 +6,7 @@ import { serverEnv } from '@/server/env';
 import { demoRotationVehicles } from '@/providers/demo/provider';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 
 export async function GET(req: Request) {
   if (!allowClient(req)) return tooMany();

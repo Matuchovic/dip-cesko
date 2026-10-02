@@ -67,6 +67,8 @@ export class VehicleFeed {
       if (res.status === 429) throw new Error('Příliš mnoho požadavků – zpomalujeme obnovu.');
       const body = (await res.json()) as Envelope<VehicleState[]>;
       if (!body || !Array.isArray(body.data) || !body.meta) throw new Error('Neplatná odpověď serveru');
+      // Chyba zdroje bez dat nesmí smazat vozidla z mapy – ponecháme poslední polohy a zkusíme to brzy znovu.
+      if (body.meta.status === 'error' && body.data.length === 0) throw new Error(body.meta.message ?? 'Zdroj poloh je dočasně nedostupný.');
       this.failures = 0;
       this.cb.onData(body, Date.now(), res.headers.get('x-doprava-offline') === '1');
       this.schedule(this.intervalMs);
@@ -76,7 +78,7 @@ export class VehicleFeed {
       // Síťová chyba (TypeError) = bez spojení se serverem; HTTP chyby jsou jiný stav.
       const offline = (typeof navigator !== 'undefined' && navigator.onLine === false) || err instanceof TypeError;
       this.cb.onError(offline ? 'Bez připojení. Zobrazujeme poslední známé polohy.' : err instanceof Error ? err.message : 'Data se nepodařilo načíst.', offline);
-      this.schedule(Math.min(60_000, this.intervalMs * 2 ** Math.min(this.failures, 3)));
+      this.schedule(Math.min(15_000, this.intervalMs * 2 ** Math.min(this.failures, 2)));
     } finally {
       clearTimeout(timeout);
     }

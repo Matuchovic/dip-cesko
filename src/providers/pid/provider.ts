@@ -9,7 +9,7 @@ import { fetchJson, fetchText } from '@/server/http';
 import { log } from '@/server/log';
 import { makeMeta } from '@/server/respond';
 import type { ProviderInfo, TransitProvider } from '../types';
-import { GOLEMIO_HOST, departureBoardUrl, type BoardQuery, golemioHeaders, mapDepartureBoard, mapVehicleCollection, vehiclePositionsUrl } from './golemio';
+import { GOLEMIO_HOST, departureBoardUrl, detailsOf, type BoardQuery, golemioHeaders, mapDepartureBoard, mapPublicVehicles, mapVehicleCollection, publicVehiclePositionsUrl, vehiclePositionsUrl, type VehicleDetails } from './golemio';
 import { PID_DATA_HOST, PID_STOPS_URL, buildStopIndex, searchStops, stopsInBBox, toAswId, type StopIndex } from './stops';
 import { PID_ALERTS_URL, PID_WEB_HOST, parseAlertsRss } from './alerts';
 
@@ -21,6 +21,8 @@ const INFO: ProviderInfo = {
 interface Config { golemioKey: string | null; cache: SharedCache; bucket: TokenBucket; stopsFile?: string }
 
 export function createPidProvider(cfg: Config): TransitProvider {
+  /** Poslední polohy vozů (pro rozpoznání skutečně nového měření u veřejného endpointu). */
+  const seen = new Map<string, { lat: number; lon: number; at: number }>();
   const meta = (source: string, extra: Partial<SourceMeta>): SourceMeta =>
     makeMeta({ provider: 'pid', source, status: 'live', fetchedAt: null, sourceTimestamp: null, attribution: INFO.attribution, ...extra });
 
@@ -46,13 +48,37 @@ export function createPidProvider(cfg: Config): TransitProvider {
     async vehicles(bbox: BBox | null) {
       if (!cfg.golemioKey) return unavailable<VehicleState[]>([], 'golemio:vehiclepositions', 'missing_api_key', 'Živé polohy PID vyžadují klíč Golemio API na serveru.');
       const key = cfg.golemioKey;
+      const headers = golemioHeaders(key);
+      // Doplňující údaje (směr, vůz, zastávky) z plného endpointu: na pozadí po 30 s, polohy na ně nečekají.
+      const details = (): Map<string, VehicleDetails> => {
+        const e = cfg.cache.peek<Map<string, VehicleDetails>>('pid:veh-details');
+        if (!e || Date.now() - e.fetchedAt > 30_000) {
+          void cfg.cache.get('pid:veh-details', { ttlMs: 30_000, staleMs: 15 * 60_000, canFetch: () => cfg.bucket.take() }, async () => {
+            const raw = await fetchJson(vehiclePositionsUrl(), { provider: 'golemio', allowHosts: [GOLEMIO_HOST], headers, timeoutMs: 25_000, retries: 0, maxBytes: 60 * 1024 * 1024 });
+            const { vehicles } = mapVehicleCollection(raw);
+            return new Map(vehicles.filter((v) => v.tripId).map((v) => [v.tripId as string, detailsOf(v)]));
+          }).catch((e2) => log('warn', 'golemio.details.error', { error: e2 instanceof Error ? e2.message : String(e2) }));
+        }
+        return e?.value ?? new Map();
+      };
       try {
-        const r = await cfg.cache.get('pid:vehicles', { ttlMs: 3_000, staleMs: 180_000, canFetch: () => cfg.bucket.take() }, async () => {
-          const raw = await fetchJson(vehiclePositionsUrl(), { provider: 'golemio', allowHosts: [GOLEMIO_HOST], headers: golemioHeaders(key), timeoutMs: 15000, retries: 1, maxBytes: 60 * 1024 * 1024 });
-          const { vehicles, invalid } = mapVehicleCollection(raw);
-          if (invalid) log('warn', 'golemio.vehicles.invalid', { invalid, valid: vehicles.length });
-          const newest = vehicles.reduce((m, v) => Math.max(m, v.measuredAt ? Date.parse(v.measuredAt) : 0), 0);
-          return { vehicles, newest };
+        const r = await cfg.cache.get('pid:vehicles', { ttlMs: 2_500, staleMs: 180_000, canFetch: () => cfg.bucket.take() }, async () => {
+          try {
+            // Hlavní zdroj: lehký veřejný endpoint (celé PID ~70 kB) – rychlý i ve špičce.
+            const raw = await fetchJson(publicVehiclePositionsUrl(), { provider: 'golemio', allowHosts: [GOLEMIO_HOST], headers, timeoutMs: 8_000, retries: 1, maxBytes: 20 * 1024 * 1024 });
+            const { vehicles, invalid } = mapPublicVehicles(raw, details(), seen, Date.now());
+            if (invalid) log('warn', 'golemio.public.invalid', { invalid, valid: vehicles.length });
+            if (!vehicles.length) throw new Error('veřejný endpoint nevrátil žádná vozidla');
+            return { vehicles, newest: Date.now() };
+          } catch (e) {
+            // Záloha: plný endpoint (pomalejší, ale se všemi údaji).
+            log('warn', 'golemio.public.fallback', { error: e instanceof Error ? e.message : String(e) });
+            const raw = await fetchJson(vehiclePositionsUrl(), { provider: 'golemio', allowHosts: [GOLEMIO_HOST], headers, timeoutMs: 20_000, retries: 0, maxBytes: 60 * 1024 * 1024 });
+            const { vehicles, invalid } = mapVehicleCollection(raw);
+            if (invalid) log('warn', 'golemio.vehicles.invalid', { invalid, valid: vehicles.length });
+            const newest = vehicles.reduce((m, v) => Math.max(m, v.measuredAt ? Date.parse(v.measuredAt) : 0), 0);
+            return { vehicles, newest };
+          }
         });
         const sourceTs = r.value.newest ? new Date(r.value.newest).toISOString() : null;
         const feedAge = r.value.newest ? (Date.now() - r.value.newest) / 1000 : null;

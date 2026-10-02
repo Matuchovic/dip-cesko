@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { nsId } from '@/domain/ids';
 import { isValidBearing } from '@/domain/angles';
 import { inCzechia, isValidLngLat } from '@/domain/geo';
-import { knownDelay, UNKNOWN_DELAY, type Delay, type Departure, type PositionState, type VehicleState } from '@/domain/model';
+import { knownDelay, UNKNOWN_DELAY, type Delay, type Departure, type Mode, type PositionState, type VehicleState } from '@/domain/model';
 import { modeFromRouteType } from '@/domain/modes';
 import { parseInstant } from '@/domain/time';
 
@@ -179,4 +179,58 @@ export function departureBoardUrl(q: BoardQuery, limit: number): string {
   if (q.by === 'names') p.set('includeMetroTrains', 'true');
   for (const v of q.values.slice(0, 40)) p.append(`${q.by}[]`, v);
   return `${GOLEMIO_BASE}/v2/pid/departureboards?${p.toString()}`;
+}
+
+// ---------- Lehký veřejný endpoint poloh (určený pro mapové aplikace; ~70 kB gzip pro celé PID) ----------
+export function publicVehiclePositionsUrl(): string {
+  return `${GOLEMIO_BASE}/v2/public/vehiclepositions`;
+}
+
+const PUB_MODE: Record<string, Mode> = { tram: 'tram', metro: 'metro', train: 'train', bus: 'bus', ferry: 'ferry', funicular: 'funicular', trolleybus: 'trolleybus' };
+const PubFeature = z.object({
+  geometry: z.object({ coordinates: z.array(z.unknown()) }).passthrough(),
+  properties: z.object({ gtfs_trip_id: nstr, route_type: nstr, gtfs_route_short_name: nstr, bearing: nnum, delay: nnum, vehicle_id: nstr, state_position: nstr }).passthrough(),
+}).passthrough();
+
+/** Doplňující údaje o spoji z plného endpointu (směr, vůz, zastávky…) – načítají se na pozadí, polohy na nich nečekají. */
+export type VehicleDetails = Pick<VehicleState, 'headsign' | 'registration' | 'vehicleTypeLabel' | 'wheelchair' | 'airConditioned' | 'lastStopName' | 'nextStopName' | 'speedMps'>;
+export const detailsOf = (v: VehicleState): VehicleDetails => ({ headsign: v.headsign, registration: v.registration, vehicleTypeLabel: v.vehicleTypeLabel, wheelchair: v.wheelchair,
+  airConditioned: v.airConditioned, lastStopName: v.lastStopName, nextStopName: v.nextStopName, speedMps: v.speedMps });
+
+/**
+ * Převod /v2/public/vehiclepositions. Endpoint neuvádí čas měření: poloha, která se od minulého dotazu
+ * nezměnila, si ponechá původní čas (`seen`), jinak dostane čas načtení – animace tak vidí jen skutečné nové polohy.
+ */
+export function mapPublicVehicles(raw: unknown, details: Map<string, VehicleDetails>, seen: Map<string, { lat: number; lon: number; at: number }>, now: number): { vehicles: VehicleState[]; invalid: number } {
+  const fc = z.object({ features: z.array(z.unknown()) }).safeParse(raw);
+  if (!fc.success) throw new Error('Neočekávaný formát veřejných poloh Golemio');
+  const out = new Map<string, VehicleState>();
+  let invalid = 0;
+  for (const item of fc.data.features.slice(0, 8000)) {
+    const f = PubFeature.safeParse(item);
+    if (!f.success) { invalid++; continue; }
+    const [lon, lat] = f.data.geometry.coordinates as [unknown, unknown];
+    const p = f.data.properties;
+    const mode = PUB_MODE[p.route_type ?? ''];
+    if (typeof lon !== 'number' || typeof lat !== 'number' || !mode || !p.gtfs_route_short_name) { invalid++; continue; }
+    if (p.state_position === 'canceled') continue;
+    const reg = (p.vehicle_id ?? '').match(/(\d+)\s*$/)?.[1] ?? null;
+    const tripId = p.gtfs_trip_id ? nsId('pid', 'trip', p.gtfs_trip_id) : null;
+    const d = tripId ? details.get(tripId) : undefined;
+    const id = nsId('pid', 'vehicle', d?.registration ?? reg ?? p.vehicle_id ?? p.gtfs_trip_id ?? `${lon},${lat}`);
+    const prev = seen.get(id);
+    const at = prev && Math.abs(prev.lat - lat) < 1e-6 && Math.abs(prev.lon - lon) < 1e-6 ? prev.at : now;
+    seen.set(id, { lat, lon, at });
+    const state = p.state_position === 'before_track_delayed' ? 'before_track' : p.state_position;
+    out.set(id, {
+      id, route: { id: null, shortName: p.gtfs_route_short_name, mode }, tripId, headsign: d?.headsign ?? null, lat, lon,
+      bearing: typeof p.bearing === 'number' ? p.bearing : null, bearingSource: typeof p.bearing === 'number' ? 'provider' : null,
+      speedMps: d?.speedMps ?? null, delay: typeof p.delay === 'number' ? knownDelay(p.delay) : UNKNOWN_DELAY, measuredAt: new Date(at).toISOString(),
+      registration: d?.registration ?? reg, vehicleTypeLabel: d?.vehicleTypeLabel ?? null, wheelchair: d?.wheelchair ?? null, airConditioned: d?.airConditioned ?? null,
+      isCanceled: false, positionState: (['on_track', 'off_track', 'at_stop', 'before_track'].includes(state ?? '') ? state : 'unknown') as VehicleState['positionState'],
+      lastStopName: d?.lastStopName ?? null, nextStopName: d?.nextStopName ?? null,
+    });
+  }
+  if (seen.size > 6000) for (const k of [...seen.keys()].slice(0, seen.size - 6000)) seen.delete(k);
+  return { vehicles: [...out.values()], invalid };
 }
