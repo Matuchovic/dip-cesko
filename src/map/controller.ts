@@ -149,7 +149,8 @@ export class MapController {
     const tram = mapAssetFor('tram'), train = mapAssetFor('train');
     const tr = tram ? spriteSizeStops(tram, lat) : [], tn = train ? spriteSizeStops(train, lat) : [];
     if (!tr.length) return ['literal', 0.5] as unknown as ExpressionSpecification;
-    const parts: unknown[] = ['interpolate', ['linear'], ['zoom']];
+    // exponenciální interpolace (základ 2) = přesně skutečná velikost i mezi zastaveními zoomu
+    const parts: unknown[] = ['interpolate', ['exponential', 2], ['zoom']];
     tr.forEach(([z, size], i) => parts.push(z, ['match', ['get', 'asset'], ...(train ? [train.id, tn[i]?.[1] ?? size] : []), size]));
     return parts as ExpressionSpecification;
   }

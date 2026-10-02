@@ -65,7 +65,7 @@ test('výběr vozidla klepnutím do mapy (zásah mimo střed)', async ({ page })
     return f ? { x: f.p.x, y: f.p.y } : null;
   });
   expect(pt).not.toBeNull();
-  await page.mouse.click(pt!.x + 5, pt!.y + 4);
+  await page.mouse.click(pt!.x + 1, pt!.y + 1); // vozidla se plynule pohybují – klik blízko středu části
   await expect(page.locator('#vd-title')).toBeVisible();
 });
 

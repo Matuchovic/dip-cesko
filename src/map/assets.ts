@@ -39,11 +39,11 @@ export function spriteSizeStops(asset: VehicleAsset, lat: number, fromZoom = ass
   const v = mapVariant(asset);
   if (!v || !asset.physical) return [];
   const imgCssLength = v.height / v.pixelRatio;
-  const min = asset.sizing?.minScreenLengthPx ?? 30;
-  const max = asset.sizing?.maxScreenLengthPx ?? 600;
+  // Vždy skutečná velikost: části soupravy stojí v metrech na trati, takže omezení velikosti obrázku
+  // (dříve max. 560 px) je při velkém přiblížení rozdělovalo a při oddálení překrývalo.
   const out: [number, number][] = [];
   for (let z = fromZoom; z <= toZoom + 1e-9; z += 0.5) {
-    const px = Math.min(max, Math.max(min, asset.physical.lengthM / metersPerPixel(lat, z)));
+    const px = asset.physical.lengthM / metersPerPixel(lat, z);
     out.push([Math.round(z * 10) / 10, Math.round((px / imgCssLength) * 10000) / 10000]);
   }
   return out;

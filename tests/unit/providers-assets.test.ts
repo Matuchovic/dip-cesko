@@ -1,3 +1,4 @@
+import { metersPerPixel } from '@/domain/geo';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -105,16 +106,15 @@ describe('manifest grafiky vozidel', () => {
     }
     expect(mapAssetFor('bus')).toBeNull();
   });
-  it('velikost na obrazovce roste s přiblížením a drží se v mezích', () => {
+  it('velikost na obrazovce odpovídá skutečné délce vozidla při každém přiblížení (části se nerozpadají)', () => {
     const a = mapAssetFor('tram')!;
     const v = mapVariant(a)!;
     const stops = spriteSizeStops(a, 50.08);
     expect(stops[0]![0]).toBe(15.5);
     let prev = 0;
-    for (const [, size] of stops) {
+    for (const [z, size] of stops) {
       const px = size * (v.height / v.pixelRatio);
-      expect(px).toBeGreaterThanOrEqual(a.sizing!.minScreenLengthPx - 0.5);
-      expect(px).toBeLessThanOrEqual(a.sizing!.maxScreenLengthPx + 0.5);
+      expect(px).toBeCloseTo(a.physical!.lengthM / metersPerPixel(50.08, z), 0);
       expect(size).toBeGreaterThanOrEqual(prev);
       prev = size;
     }

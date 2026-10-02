@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.5.1 – 2026-10-02
+- Obrázky vozidel (PNG shora) se při velkém přiblížení už nerozpadají na části: velikost obrázku je vždy skutečná (dříve omezená na 560 px), interpolace přesně odpovídá zoomu.
+
 ## 0.5.0 – 2026-10-02
 - Nová značka DopravaČR: logo v hlavičce (světlá i tmavá varianta), na mobilu v panelu se sloganem v jazyce aplikace; barvy celé aplikace podle ikony (námořnická a ocelová modrá, světlé sklo).
 - Favicon (16/32/48 px), ikony PWA „any“ i „maskable“, ikona pro iPhone, manifest se zkratkami (Odjezdy, Spojení), tlačítko „Nainstalovat aplikaci“ v Nastavení (iPhone: návod).
