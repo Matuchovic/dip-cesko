@@ -113,7 +113,7 @@ export function pushMessage(w: Watch, d: Departure | null, now: number, kind: 'a
   const plat = d?.platform ? (en ? `, stop ${d.platform}` : `, nástupiště ${d.platform}`) : '';
   const late = d && d.delay.kind === 'known' && d.delay.seconds >= 60 ? Math.round(d.delay.seconds / 60) : 0;
   const status = late ? (en ? `⏱️ ${late} min late` : `⏱️ ${late} min zpoždění`) : d?.delay.kind === 'known' ? (en ? '✅ on time' : '✅ jede včas') : (en ? '🕒 per timetable' : '🕒 podle jízdního řádu');
-  const hurry = min <= 3 ? (en ? ' · 🏃 leave now' : ' · 🏃 vyraz hned') : '';
+  const hurry = min <= 3 ? (en ? ' · 🏃 leave now' : ' · 🏃 vyraž hned') : '';
   return {
     title: `${emoji} ${w.line} · ${when} · ${dest}`,
     body: `📍 ${w.stopName}${plat}\n${status}${hurry}`,

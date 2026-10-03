@@ -8,7 +8,7 @@ test('domovská obrazovka: nejbližší zastávka, tři odjezdy s radou, uložen
   await expect(hero.locator('.eyebrow')).toContainText('Nejbližší zastávka');
   await expect.poll(async () => hero.locator('.dep-row').count(), { timeout: 30_000 }).toBeGreaterThan(0);
   expect(await hero.locator('.dep-row').count()).toBeLessThanOrEqual(3);
-  await expect(hero.locator('.dep-row').first().locator('.ok, .warn, .bad')).toHaveText(/Stihneš to|Vyraz hned|Nestihneš/);
+  await expect(hero.locator('.dep-row').first().locator('.ok, .warn, .bad')).toHaveText(/Stihneš to|Vyraž hned|Nestihneš/);
   await page.screenshot({ path: '/tmp/look-home.png' });
   await page.getByRole('button', { name: /Domů/ }).click();
   await page.getByRole('combobox').last().fill('Anděl');

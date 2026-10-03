@@ -11,6 +11,7 @@ import { initInstall } from '@/lib/install';
 import { initOnboarding } from '@/lib/onboarding';
 import { playTramBell, unlockAudio } from '@/lib/sound';
 import Onboarding from './Onboarding';
+import NewsTicker from './NewsTicker';
 import { hydrateSettings, prefersReducedMotion, settingsStore } from '@/lib/settings';
 import { IconClock, IconMap, IconRoute, IconSearch, IconSettings, IconStar, IconTicket } from './icons';
 import { FreshnessPill } from './ui';
@@ -63,14 +64,23 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
     // upozornění na spoj přišlo, když je aplikace otevřená → tramvajový zvonek
     const onMsg = (e: MessageEvent) => { if ((e.data as { type?: string } | null)?.type === 'dopravacr-alert') playTramBell(); };
     navigator.serviceWorker?.addEventListener('message', onMsg);
-    // iPhone v režimu aplikace s průhledným stavovým řádkem hlásí výšku okna menší o stavový řádek → dorovnat
-    const fixVh = () => {
-      const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && (navigator as Navigator & { standalone?: boolean }).standalone === true;
-      const gap = ios ? Math.round(window.screen.height - window.innerHeight) : 0;
-      document.documentElement.style.setProperty('--ios-gap', `${gap > 0 && gap < 90 && window.innerWidth < window.innerHeight ? gap : 0}px`);
+    // iPhone (aplikace na ploše): po prvním otevření klávesnice WebKit zmenší okno a už ho nevrátí → dole prázdný pruh.
+    // Oprava: po zavření klávesnice krátce přepnout zobrazení celoobrazovkového prvku, WebKit pak výšku přepočítá.
+    const iosApp = /iphone|ipad|ipod/i.test(navigator.userAgent) && (navigator as Navigator & { standalone?: boolean }).standalone === true;
+    let maxVH = window.innerHeight;
+    const onResize = () => { maxVH = Math.max(maxVH, window.innerHeight); };
+    const heal = () => {
+      if (!iosApp || maxVH - window.innerHeight <= 4) return;
+      const el = document.querySelector<HTMLElement>('.app');
+      if (!el) return;
+      el.style.display = 'none';
+      void el.offsetHeight; // synchronní přepočet rozvržení
+      el.style.display = '';
     };
-    fixVh();
-    window.addEventListener('resize', fixVh);
+    const onFocusOut = (e: FocusEvent) => { if ((e.target as HTMLElement | null)?.matches?.('input, textarea, select')) setTimeout(heal, 160); };
+    window.addEventListener('resize', onResize);
+    document.addEventListener('focusout', onFocusOut);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') setTimeout(heal, 200); });
     const apply = () => { document.documentElement.dataset.motion = prefersReducedMotion(settingsStore.get()) ? 'reduce' : 'full'; };
     apply();
     const unsub = settingsStore.subscribe(apply);
@@ -168,6 +178,7 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
         </section>
       )}
 
+      <NewsTicker />
       <nav className="tabbar" aria-label={t('navMain')}>
         {NAV.map(({ href, label, Icon }) => <TLink key={href} href={href} aria-current={pathname === href ? 'page' : undefined}><Icon size={22} />{t(label)}</TLink>)}
       </nav>

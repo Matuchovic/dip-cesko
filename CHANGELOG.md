@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.0 – 2026-10-03
+- Běžící pruh nad spodní lištou: při mimořádnostech PID tmavý „PROVOZ“, jinak „NOVINKY“ s tipy; jede zprava doleva, prstem se zastaví, klepnutím detail (s křížkem), křížkem se schová do příštího spuštění; na počítači pod mapou.
+- Správná čeština „vyraž hned“ / „Vyraž za … min“ (upozornění, rada u odjezdu, Tvoje místa).
+- iPhone: chybné dorovnání výšky z 0.11.0 (schovávalo popisky spodní lišty) nahrazeno opravou známé chyby WebKitu – po zavření klávesnice zůstávalo okno menší a dole vznikl prázdný pruh; teď se výška po zavření klávesnice i po návratu do aplikace obnoví.
+
 ## 0.11.0 – 2026-10-03
 - Upozornění podle schváleného návrhu: smajlík druhu dopravy, v tučném nadpisu linka, za kolik minut a kam; pod tím kde (nástupiště) a stav (✅ včas / ⏱️ zpoždění / 🏃 vyraz hned); zrušený spoj (❌) nabídne další; na Androidu tlačítka „Kde je spoj“ a „Odjezdy“.
 - Tramvajový zvonek: když upozornění přijde při otevřené aplikaci, zazní dvojí „cink“ (zvuk se odemkne prvním dotykem).
