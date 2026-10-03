@@ -117,6 +117,7 @@ export class ArticulatedLayer implements CustomLayerInterface {
   private live = new Color(0xffffff);
   private stale = new Color(0x9aa0aa);
   enabled = true;
+  private warned = false;
 
   constructor(private readonly assets: VehicleAsset[]) {}
 
@@ -206,7 +207,11 @@ export class ArticulatedLayer implements CustomLayerInterface {
     return k;
   }
 
-  setVehicles(list: ArticulatedVehicle[]) { this.vehicles = list; this.dirty = true; this.map?.triggerRepaint(); }
+  setVehicles(list: ArticulatedVehicle[]) {
+    const ok = (p: SectionPlacement) => Number.isFinite(p.lng) && Number.isFinite(p.lat) && Number.isFinite(p.bearing);
+    this.vehicles = list.filter((v) => ok(v.center) && v.sections.every(ok) && v.joints.every(ok));
+    this.dirty = true; this.map?.triggerRepaint();
+  }
   setEnabled(on: boolean) { this.enabled = on; this.dirty = true; this.map?.triggerRepaint(); }
 
   private place(p: SectionPlacement, scale: number, unit: number) {
@@ -252,12 +257,17 @@ export class ArticulatedLayer implements CustomLayerInterface {
 
   render(_gl: WebGL2RenderingContext, args: CustomRenderMethodInput) {
     if (!this.map || !this.renderer || !this.enabled || !this.vehicles.length) return;
-    if (this.dirty) this.update();
-    this.camera.projectionMatrix.fromArray(args.defaultProjectionData.mainMatrix).multiply(this.transform);
-    this.camera.projectionMatrixInverse.copy(this.camera.projectionMatrix).invert();
-    this.renderer.resetState();
-    this.renderer.render(this.scene, this.camera);
-    this.renderer.resetState();
+    try {
+      if (this.dirty) this.update();
+      this.camera.projectionMatrix.fromArray(args.defaultProjectionData.mainMatrix).multiply(this.transform);
+      this.camera.projectionMatrixInverse.copy(this.camera.projectionMatrix).invert();
+      this.renderer.resetState();
+      this.renderer.render(this.scene, this.camera);
+      this.renderer.resetState();
+    } catch (e) {
+      this.dirty = false;
+      if (!this.warned) { this.warned = true; console.warn('3D soupravy: vykreslení selhalo', e); }
+    }
   }
 
   /** Paprsek proti obálce soupravy (střed, směr, délka) – zásah kamkoli do karoserie vybere vozidlo. */

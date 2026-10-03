@@ -12,6 +12,8 @@ import { hydrateSettings, prefersReducedMotion, settingsStore } from '@/lib/sett
 import { IconClock, IconMap, IconRoute, IconSearch, IconSettings, IconStar, IconTicket } from './icons';
 import { FreshnessPill } from './ui';
 import { useT } from '@/i18n';
+import TLink from './TLink';
+import { useTransitionResolver } from '@/lib/transitions';
 import type { MessageKey } from '@/i18n/messages';
 import MapChrome from './MapChrome';
 import VehicleDetail from './VehicleDetail';
@@ -32,6 +34,7 @@ const PEEK = 196;
 export default function AppShell({ children, styleUrl, demo }: { children: ReactNode; styleUrl: string; demo: boolean }) {
   const pathname = usePathname();
   const t = useT();
+  useTransitionResolver();
   const isMapRoute = pathname === '/' || pathname.startsWith('/test/');
   const mobile = useMediaQuery('(max-width: 899px)');
   const selected = useStore(appStore, (s) => s.selected);
@@ -102,7 +105,7 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
           <img className="brand-logo dark" src="/brand/logo-dark.png" alt="" width={174} height={40} />
         </Link>
         <nav className="nav" aria-label={t('navMain')}>
-          {NAV.map(({ href, label, Icon }) => <Link key={href} href={href} aria-current={pathname === href ? 'page' : undefined}><Icon size={18} />{t(label)}</Link>)}
+          {NAV.map(({ href, label, Icon }) => <TLink key={href} href={href} aria-current={pathname === href ? 'page' : undefined}><Icon size={18} />{t(label)}</TLink>)}
         </nav>
         <div className="topbar-right">
           <FreshnessPill meta={meta} error={feedError} offline={offline} now={now} />
@@ -137,7 +140,7 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
       )}
 
       <nav className="tabbar" aria-label={t('navMain')}>
-        {NAV.map(({ href, label, Icon }) => <Link key={href} href={href} aria-current={pathname === href ? 'page' : undefined}><Icon size={22} />{t(label)}</Link>)}
+        {NAV.map(({ href, label, Icon }) => <TLink key={href} href={href} aria-current={pathname === href ? 'page' : undefined}><Icon size={22} />{t(label)}</TLink>)}
       </nav>
       <div className="sr-only" aria-live="polite" role="status">{announce}</div>
     </div>

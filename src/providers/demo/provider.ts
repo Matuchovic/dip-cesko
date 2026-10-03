@@ -1,9 +1,10 @@
 import { nsId } from '@/domain/ids';
 import { initialBearingDeg, lerpLngLat, inBBox, type BBox } from '@/domain/geo';
-import { knownDelay, UNKNOWN_DELAY, type Alert, type Departure, type Envelope, type Mode, type SourceMeta, type StopGroup, type StopPoint, type VehicleState } from '@/domain/model';
+import { knownDelay, UNKNOWN_DELAY, type Alert, type Departure, type Envelope, type Mode, type SourceMeta, type StopGroup, type StopPoint, type VehicleState, type TripDetail, type MetroLineGeo } from '@/domain/model';
 import { normalizeName } from '../pid/stops';
 import { pointAlong, polyLength } from '@/map/geometry';
 import { DEMO_TRACK_7 } from './track';
+import { METRO_SCHEMA, type MetroLineId } from '@/domain/metro';
 import type { TransitProvider } from '../types';
 
 /**
@@ -72,7 +73,7 @@ function curveRun(measuredMs: number): VehicleState {
 
 /** Poloha se „měří“ po 10 s – klient tak ověřuje interpolaci mezi měřeními. */
 export function demoVehicles(nowMs: number): VehicleState[] {
-  return [curveRun(Math.floor(nowMs / 10_000) * 10_000), ...RUNS.map((r): VehicleState => {
+  return [curveRun(Math.floor(nowMs / 10_000) * 10_000), ...demoMetroTrains(nowMs), ...RUNS.map((r): VehicleState => {
     const measuredMs = Math.floor(nowMs / 10_000) * 10_000 - (r.ageOffsetS ?? 0) * 1000;
     const t = (((measuredMs / 1000 + r.phaseS) % r.periodS) + r.periodS) % r.periodS / r.periodS;
     const forward = t < 0.5;
@@ -121,6 +122,30 @@ function demoDepartures(group: StopGroup, nowMs: number, limit: number): Departu
   return out.sort((a, b) => Date.parse(a.predictedAt ?? a.scheduledAt!) - Date.parse(b.predictedAt ?? b.scheduledAt!)).slice(0, limit);
 }
 
+
+/** Ukázkové metro: stanice leží na souřadnicích odvozených ze schématu (jen pro vývoj, nejde o skutečnou geografii). */
+const demoGeo = (x: number, y: number) => ({ lon: 14.3 + x * 0.0009, lat: 50.13 - y * 0.0004 });
+export function demoMetroTrains(nowMs: number): VehicleState[] {
+  const out: VehicleState[] = [];
+  (['A', 'B', 'C'] as MetroLineId[]).forEach((line, li) => {
+    const st = METRO_SCHEMA[line];
+    for (let k = 0; k < 2; k++) {
+      const fwd = k === 0;
+      const t = (((nowMs / 1000) / 240 + li * 0.21 + k * 0.5) % 1);
+      const idx = t * (st.length - 1), i = Math.floor(idx), f = idx - i;
+      const a = st[fwd ? i : st.length - 1 - i]!, b = st[fwd ? Math.min(st.length - 1, i + 1) : Math.max(0, st.length - 2 - i)]!;
+      const ga = demoGeo(a.x, a.y), gb = demoGeo(b.x, b.y);
+      const lon = ga.lon + (gb.lon - ga.lon) * f, lat = ga.lat + (gb.lat - ga.lat) * f;
+      const bearing = (Math.atan2((gb.lon - ga.lon) * 71.5, (gb.lat - ga.lat) * 111) * 180 / Math.PI + 360) % 360;
+      out.push({ id: nsId('demo', 'vehicle', `metro-${line}-${k}`), route: { id: nsId('demo', 'route', line), shortName: line, mode: 'metro' }, tripId: null,
+        headsign: fwd ? st[st.length - 1]!.name : st[0]!.name, lat, lon, bearing: Math.round(bearing), bearingSource: 'provider', speedMps: 12, delay: knownDelay(0),
+        measuredAt: new Date(Math.floor(nowMs / 10_000) * 10_000).toISOString(), registration: null, vehicleTypeLabel: 'souprava metra', wheelchair: true, airConditioned: true,
+        isCanceled: false, positionState: 'on_track', lastStopName: null, nextStopName: null });
+    }
+  });
+  return out;
+}
+
 export function createDemoProvider(now: () => number = Date.now): TransitProvider {
   const env = <T>(data: T, source: string): Envelope<T> => ({ data, meta: meta(source) });
   return {
@@ -133,6 +158,17 @@ export function createDemoProvider(now: () => number = Date.now): TransitProvide
     async searchStops(q: string, limit: number) {
       const n = normalizeName(q);
       return env(n.length < 2 ? [] : DEMO_GROUPS.filter((g) => normalizeName(g.name).includes(n)).slice(0, limit), 'demo:stops');
+    },
+    async trip(id: string) {
+      const v = demoVehicles(now()).find((x) => x.id === id);
+      if (!v || v.route.mode === 'metro') return env<TripDetail | null>(null, 'demo:trip');
+      const line = v.route.mode === 'tram' && v.route.shortName === '7' ? DEMO_TRACK_7.map(([lng, lat]) => ({ lng, lat })) : [{ lng: v.lon - 0.004, lat: v.lat }, { lng: v.lon + 0.004, lat: v.lat }];
+      const names = ['Anděl', 'Na Knížecí', 'Křížová', 'Radlická'];
+      const stops = names.map((name, i) => { const p = line[Math.round((i / (names.length - 1)) * (line.length - 1))]!; return { seq: i + 1, name, lat: p.lat, lon: p.lng, arrival: null, departure: null, arrivalRt: null, departureRt: null }; });
+      return env<TripDetail | null>({ vehicleId: id, line: v.route.shortName, mode: v.route.mode, headsign: v.headsign, delay: v.delay, lastStopSeq: 1, stops, shape: line.map((p) => [p.lng, p.lat]) }, 'demo:trip');
+    },
+    async metro() {
+      return env<MetroLineGeo[]>((['A', 'B', 'C'] as MetroLineId[]).map((line) => ({ line, stations: METRO_SCHEMA[line].map((st) => ({ name: st.name, key: null, ...demoGeo(st.x, st.y) })) })), 'demo:metro');
     },
     async stopsInView(bbox: BBox) { return env<StopPoint[]>(DEMO_GROUPS.flatMap((g) => g.platforms).filter((p) => inBBox(bbox, p.lon, p.lat)), 'demo:stops'); },
     async alerts() { return env<Alert[]>([{ id: nsId('demo', 'alert', '1'), title: 'Ukázková mimořádnost: omezení provozu tramvají', summary: 'Tento text je ukázkový a neodpovídá skutečnému provozu.', link: null, publishedAt: new Date(now() - 1800_000).toISOString() }], 'demo:alerts'); },

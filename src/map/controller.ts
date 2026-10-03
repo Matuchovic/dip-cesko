@@ -58,6 +58,7 @@ export class MapController {
   private raf = 0;
   private lastPush = 0;
   private lastLiveData = 0;
+  private warnedFrame = false;
   private liveDirty = true;
   private last3d = 0;
   private lastSelEmit = 0;
@@ -360,7 +361,7 @@ export class MapController {
       visible.push({ id, d: (v.lon - center.lng) ** 2 + (v.lat - center.lat) ** 2 });
     }
     visible.sort((a, c) => a.d - c.d);
-    visible.forEach(({ id }, rank) => {
+    visible.forEach(({ id }, rank) => { try {
       const v = this.vehicles.get(id)!;
       const s = this.follower.sample(id, now);
       if (!s) return;
@@ -371,6 +372,7 @@ export class MapController {
       const asset = this.settings.vehicleStyle === 'sprites' ? mapAssetFor(v.route.mode) : null;
       const len = polyLength(s.body);
       const mid = s.body.length >= 2 && len > 0.5 ? pointAlong(s.body, len / 2).p : s.front;
+      if (!Number.isFinite(mid.lng) || !Number.isFinite(mid.lat)) return;
       const hasBody = s.bearing !== null && len > 0.5;
       const sprite = Boolean(asset && hasBody && asset.pieces?.length && this.map.hasImage(`${asset.id}#0`));
       const mode = v.route.mode;
@@ -400,7 +402,7 @@ export class MapController {
       } });
       if (sprite && asset && !this.pitchedMode && zoom >= SPRITE_ZOOM) pieces.push(...buildPieces(s.body, shape, asset.id, { fresh: stale ? 'stale' : 'live', sort: sel ? 1000 : 10 }));
       if (want3d && hasBody && HAS_3D.has(v.route.mode)) solids.push(...buildExtrusions(s.body, shape));
-    });
+    } catch (e) { if (!this.warnedFrame) { this.warnedFrame = true; console.warn('Vozidlo nelze vykreslit', id, e); } } });
     // štítky a body: nejvýš 10× za sekundu (3D modely se posouvají v každém snímku) – méně práce pro mapu
     if (now - this.lastLiveData >= 100 || this.liveDirty) { (this.map.getSource(LIVE) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: live }); this.lastLiveData = now; this.liveDirty = false; }
     this.modelLayer.setVehicles(style === 'models' ? models : []);
@@ -658,6 +660,8 @@ export class MapController {
   }
 
   isOnTrack(id: string): boolean { return this.follower.isOnTrack(id); }
+  /** Diagnostika: kolik vozidel jakého druhu tento prohlížeč právě dostal. */
+  countsByMode(): Partial<Record<Mode, number>> { const out: Partial<Record<Mode, number>> = {}; for (const v of this.vehicles.values()) out[v.route.mode] = (out[v.route.mode] ?? 0) + 1; return out; }
   /** Kolik sekund od posledního měření je poloha dopočtená po trati (0 = přímo měření). */
   predictedSeconds(id: string): number { return this.follower.sample(id, Date.now())?.predictedS ?? 0; }
 

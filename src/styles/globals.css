@@ -295,3 +295,38 @@ button.row:hover, a.row:hover { background: var(--surface-hover); }
 [dir="rtl"] .vlist { right: auto; left: 72px; }
 [dir="rtl"] .row-side { text-align: start; }
 @media (max-width: 899px) { [dir="rtl"] .map-top { right: var(--s3); left: var(--s3); } [dir="rtl"] .panel:not(.sheet-host) { right: 0; } }
+
+/* ---------- plynulé přechody mezi obrazovkami (jen panel; mapa zůstává) ---------- */
+.panel { view-transition-name: panel; }
+::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+::view-transition-old(panel) { animation: vt-out 160ms ease-in both; }
+::view-transition-new(panel) { animation: vt-in 260ms cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes vt-out { to { opacity: 0; transform: translateY(6px) scale(.99); } }
+@keyframes vt-in { from { opacity: 0; transform: translateY(12px) scale(.99); } }
+@media (prefers-reduced-motion: reduce) { ::view-transition-old(panel), ::view-transition-new(panel) { animation: none; } }
+
+/* ---------- živé schéma metra ---------- */
+.metro-wrap { margin-top: var(--s3); background: var(--surface-solid); border-radius: var(--r-lg); padding: var(--s2); }
+.metro-svg { width: 100%; height: auto; display: block; }
+.metro-label { font-size: 9px; font-weight: 600; fill: var(--ink-2); paint-order: stroke; stroke: var(--surface-solid); stroke-width: 3px; }
+.metro-station { fill: var(--surface-solid); stroke-width: 2.5; }
+.metro-transfer { fill: var(--surface-solid); stroke: var(--ink); stroke-width: 3; }
+.metro-train { transition: transform 4.6s linear; cursor: pointer; }
+.metro-train-halo { fill: none; stroke-width: 2; opacity: .5; animation: train-pulse 2.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes train-pulse { 0% { transform: scale(.8); opacity: .65; } 100% { transform: scale(1.9); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .metro-train { transition: none; } .metro-train-halo { animation: none; } }
+
+/* ---------- schéma linky ---------- */
+.line-schema { position: relative; margin-top: var(--s4); }
+.line-rail { position: absolute; left: 21px; top: 22px; bottom: 22px; width: 6px; border-radius: 3px; background: var(--line-color); opacity: .9; }
+.line-stop { position: absolute; left: 0; right: 0; height: 44px; display: flex; align-items: center; gap: 14px; padding-left: 14px; }
+.line-dot { width: 20px; height: 20px; border-radius: 50%; background: var(--surface-solid); border: 4px solid var(--line-color); flex: none; z-index: 1; }
+.line-dot.end { width: 22px; height: 22px; border-width: 6px; }
+.line-name { font-weight: 650; font-size: var(--fs-sm); color: var(--ink); }
+.line-vehicle { position: absolute; top: 0; right: 8px; min-width: 56px; height: 28px; border-radius: 14px; border: 3px solid; background: var(--line-color); color: #fff;
+  font: inherit; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 0 10px; cursor: pointer;
+  transition: transform 4.6s linear; box-shadow: var(--shadow-sm); }
+.line-vehicle::before { content: ''; position: absolute; left: -60px; top: 50%; width: 52px; border-top: 2px dashed var(--line-color); opacity: .5; }
+.line-vehicle-chevron { font-size: 9px; }
+.badge-link { display: inline-flex; text-decoration: none; border-radius: var(--r-sm); }
+@media (prefers-reduced-motion: reduce) { .line-vehicle { transition: none; } }

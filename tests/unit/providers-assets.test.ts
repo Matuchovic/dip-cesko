@@ -176,3 +176,26 @@ describe('polohy: rychlý zdroj a záloha', () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe('úplnost: co lehký zdroj nemá, doplní plný', () => {
+  it('chybějící tramvaje se doplní z plného zdroje; tramvaj a autobus se stejným číslem se nepřepíší', async () => {
+    for (const m of ['log', 'warn', 'error'] as const) vi.spyOn(console, m).mockImplementation(() => {});
+    let clock = Date.now();
+    const p = createPidProvider({ golemioKey: 'k', cache: new SharedCache(() => clock), bucket: new TokenBucket(16, 16 / 8000), stopsFile });
+    const pub = { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [14.42, 50.08] },
+      properties: { gtfs_trip_id: 'b1', route_type: 'bus', gtfs_route_short_name: '135', bearing: 0, delay: 0, vehicle_id: 'service-3-8566', state_position: 'on_track' } }] };
+    const fullBody = () => ({ type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [14.425, 50.081] },
+      properties: { last_position: { bearing: 90, origin_timestamp: new Date(clock - 5_000).toISOString(), delay: { actual: 0 }, state_position: 'on_track' },
+        trip: { gtfs: { route_short_name: '6', route_type: 0, trip_id: 't6' }, vehicle_registration_number: 8566 } } }] });
+    vi.stubGlobal('fetch', vi.fn(async (u: string | URL | Request) => String(u).includes('/v2/public/')
+      ? new Response(JSON.stringify(pub), { status: 200 }) : new Response(JSON.stringify(fullBody()), { status: 200 })));
+    await p.vehicles(null);
+    await new Promise((r) => setTimeout(r, 20)); // plný zdroj se načte na pozadí
+    clock += 3_000;
+    const r = await p.vehicles(null);
+    const modes = r.data.map((v) => v.route.mode).sort();
+    expect(modes).toEqual(['bus', 'tram']);
+    expect(new Set(r.data.map((v) => v.id)).size).toBe(2);
+    vi.unstubAllGlobals();
+  });
+});

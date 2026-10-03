@@ -5,6 +5,7 @@ import { departureMs } from '@/domain/departures';
 import { formatClock, minutesUntil } from '@/domain/time';
 import { useT } from '@/i18n';
 import { DelayLabel, LineBadge } from './ui';
+import TLink from './TLink';
 import { IconWheelchair } from './icons';
 
 /** Přehled po linkách: každá linka a směr s nejbližšími odjezdy (minuty i přesný čas). */
@@ -16,7 +17,7 @@ export function DepartureGroups({ groups, now, label }: { groups: DepartureGroup
         const first = g.items[0];
         return (
           <li key={g.key} className="row dep-group">
-            <LineBadge line={g.route.shortName} mode={g.route.mode} />
+            <TLink href={`/linka?l=${encodeURIComponent(g.route.shortName)}&m=${g.route.mode}`} aria-label={t('line_open')} className="badge-link"><LineBadge line={g.route.shortName} mode={g.route.mode} /></TLink>
             <span className="row-main">
               <span className="row-title">{g.headsign}</span>
               <span className="row-sub">{g.platforms.length ? g.platforms.map((p) => t('platformShort', { p })).join(', ') : t('platformUnknown')}{first && <> · <DelayLabel delay={first.delay} /></>}</span>

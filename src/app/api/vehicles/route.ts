@@ -5,6 +5,8 @@ import { parseBBox } from '@/domain/geo';
 import { serverEnv } from '@/server/env';
 import { demoRotationVehicles } from '@/providers/demo/provider';
 
+import { MODES } from '@/domain/model';
+
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
@@ -17,6 +19,10 @@ export async function GET(req: Request) {
   const raw = sp.get('bbox');
   const bbox = parseBBox(raw);
   if (raw && !bbox) return badRequest('Neplatný výřez mapy.');
+  // Volitelný filtr jedné linky (schéma linky, metro): striktně ověřené hodnoty.
+  const line = sp.get('line'), mode = sp.get('mode');
+  if ((line && !/^[A-Za-z0-9]{1,6}$/.test(line)) || (mode && !(MODES as readonly string[]).includes(mode))) return badRequest('Neplatný filtr linky.');
   const res = await transit().vehicles(bbox);
-  return json(res, { maxAge: res.meta.status === 'live' ? 5 : 0 });
+  if (line || mode) res.data = res.data.filter((v) => (!line || v.route.shortName === line) && (!mode || v.route.mode === mode));
+  return json(res, { maxAge: res.meta.status === 'live' ? 3 : 0 });
 }

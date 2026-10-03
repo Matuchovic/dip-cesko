@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.0 – 2026-10-03
+- Živé schéma metra (/metro): stylizované linky A, B, C pro mobil, všech 61 stanic, přestupy, soupravy podle skutečných poloh (obnova 5 s, plynulý pohyb), klepnutí na stanici = odjezdy, na soupravu = mapa se sledováním.
+- Schéma linky (/linka): zastávky obou směrů pod sebou a všechny vozy linky v reálném čase; směr vozu podle souhlasu kurzu se směrem trasy; barva rámečku = zpoždění. Otevře se z detailu vozidla i klepnutím na číslo linky v odjezdech.
+- Průběh spoje z veřejného detailu vozidla Golemio (zastávky v pořadí, tvar trasy) – nové API /api/trip a /api/metro.
+- Plynulé přechody mezi obrazovkami (View Transitions): animuje se jen panel, mapa zůstává; bez podpory nebo s omezenými animacemi okamžitě.
+- Bezpečnost: přísná CSP s jednorázovým nonce pro každý požadavek (src/proxy.ts) – na stránkách neběží žádný skript bez platného nonce; Cross-Origin-Opener-Policy; nové vstupy API striktně ověřené (ID vozu, linka, druh dopravy) a s limity požadavků; audit závislostí bez nálezů.
+
+## 0.5.3 – 2026-10-02
+- Tramvaje zpět na mapě: tramvaj a autobus se stejným číslem vozu (např. 8566) se už nepřepisují (klíč obsahuje druh dopravy, shodně s plným zdrojem); co v lehkém zdroji chybí, doplní plný zdroj (obnova po 10 s, poloha max. 2 min stará).
+- Odolnost: vadná data jednoho vozidla už nezastaví vykreslení ostatních (3D vrstvy i smyčka mapy); ochrana proti neplatným číslům v dopočtu polohy.
+- Stav dat ukazuje počty vozidel podle druhu na serveru i v tomto prohlížeči (pro rychlou diagnostiku).
+
 ## 0.5.2 – 2026-10-02
 - Polohy vozidel z lehkého veřejného endpointu Golemio (/v2/public/vehiclepositions, celé PID ~70 kB) – rychlé i ve špičce; plný endpoint (10 000 vozidel, jednotky MB) se načítá jen na pozadí po 30 s kvůli směru, číslu vozu a zastávkám a slouží jako záloha. Ráno ve špičce se plný dotaz nestihl a mapa zůstala prázdná.
 - Chyba zdroje už nesmaže vozidla z mapy; nový pokus nejpozději za 15 s.

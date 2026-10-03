@@ -11,6 +11,7 @@ import '@fontsource/plus-jakarta-sans/latin-800.css';
 import '@/styles/globals.css';
 import { isRtl } from '@/i18n/locales';
 import { resolveLocale } from '@/i18n/server';
+import { headers } from 'next/headers';
 
 export const metadata: Metadata = {
   title: { default: 'DopravaČR – najdi si spoj, kdykoliv, kdekoliv', template: '%s · DopravaČR' },
@@ -32,9 +33,10 @@ const themeInit = `try{var s=JSON.parse(localStorage.getItem('doprava.settings.v
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const locale = await resolveLocale();
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (
     <html lang={locale} dir={isRtl(locale) ? 'rtl' : 'ltr'} suppressHydrationWarning>
-      <head><script dangerouslySetInnerHTML={{ __html: themeInit }} /></head>
+      <head><script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeInit }} /></head>
       <body>{children}</body>
     </html>
   );

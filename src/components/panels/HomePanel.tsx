@@ -9,6 +9,7 @@ import { favoritesStore } from '@/lib/favorites';
 import { haversineM } from '@/domain/geo';
 import type { Alert, Envelope, Mode, StopPoint } from '@/domain/model';
 import { MODE_RANK } from '@/domain/departures';
+import TLink from '../TLink';
 import { modeName, useT } from '@/i18n';
 import type { MessageKey } from '@/i18n/messages';
 import { formatClock } from '@/domain/time';
@@ -72,6 +73,7 @@ export default function HomePanel() {
       <div className="actions" style={{ marginTop: 0 }}>
         <Link className="btn btn-primary" href="/spojeni"><IconRoute size={18} />{t('home_plan')}</Link>
         <button type="button" className="btn btn-secondary" onClick={() => mapApi.controller?.locate()} disabled={!ready || locate === 'locating'}><IconLocate size={18} />{locate === 'locating' ? t('home_locating') : t('home_nearMe')}</button>
+          <TLink className="btn btn-secondary" href="/metro"><IconRoute size={18} />{t('metro_open')}</TLink>
       </div>
 
       {meta?.status === 'unavailable' && <div className="notice" style={{ marginTop: 'var(--s4)' }}><span><strong>{t('home_liveMissingTitle')}</strong> {meta.reason ? t(`reason_${meta.reason}` as MessageKey) : meta.message} {t('home_liveMissingText')}</span></div>}

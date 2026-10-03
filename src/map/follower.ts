@@ -75,7 +75,8 @@ export class TrackFollower {
   }
 
   private dp(f: Follow, t: number): number {
-    return Math.min(f.stopAt, f.v * Math.min(MAX_PREDICT_S, Math.max(0, (t - f.tm) / 1000)));
+    const d = Math.min(f.stopAt, f.v * Math.min(MAX_PREDICT_S, Math.max(0, (t - f.tm) / 1000)));
+    return Number.isFinite(d) ? d : 0;
   }
 
   private place(id: string, mode: Mode, now: number, net: (k: TrackKind) => TrackNetwork | null, prev: BodySample | null, force: boolean) {
@@ -91,7 +92,7 @@ export class TrackFollower {
     const hint = target.bearing ?? prev?.bearing ?? null;
     const E = network.nearest({ lng: target.lng, lat: target.lat }, SNAP_RADIUS[kind], hint);
     if (!E) { this.follows.delete(id); return; }
-    const tm = target.measuredAt;
+    const tm = Number.isFinite(target.measuredAt) ? target.measuredAt : now;
     let dir = hint ?? E.segBearing;
     // rychlost: z dat, jinak z ujeté vzdálenosti po trati mezi měřeními (vyhlazeně)
     let v = f?.v ?? 0;
@@ -107,7 +108,8 @@ export class TrackFollower {
       }
     }
     const m = this.meta.get(id);
-    if (m?.speed !== null && m?.speed !== undefined) v = m.speed;
+    if (typeof m?.speed === 'number' && Number.isFinite(m.speed)) v = m.speed;
+    if (!Number.isFinite(v) || v < 0) v = 0;
     if (m?.state === 'at_stop' || m?.state === 'before_track' || m?.state === 'canceled') v = 0;
     const forward = network.walk(E, dir, Math.min(1500, Math.max(60, v * MAX_PREDICT_S + 40)));
     const forwardLen = polyLength(forward);

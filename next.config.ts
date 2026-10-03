@@ -28,7 +28,9 @@ const nextConfig: NextConfig = {
       {
         source: '/:path*',
         headers: [
+          // CSP s nonce nastavuje src/proxy.ts pro stránky; zde jen záložní přísná politika pro ostatní odpovědi
           { key: 'Content-Security-Policy', value: csp },
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'geolocation=(self), camera=(), microphone=(), payment=()' },

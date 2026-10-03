@@ -9,7 +9,7 @@ import { fetchJson, fetchText } from '@/server/http';
 import { log } from '@/server/log';
 import { makeMeta } from '@/server/respond';
 import type { ProviderInfo, TransitProvider } from '../types';
-import { GOLEMIO_HOST, departureBoardUrl, detailsOf, type BoardQuery, golemioHeaders, mapDepartureBoard, mapPublicVehicles, mapVehicleCollection, publicVehiclePositionsUrl, vehiclePositionsUrl, type VehicleDetails } from './golemio';
+import { GOLEMIO_HOST, VEHICLE_ID_RE, departureBoardUrl, detailsOf, mapVehicleDetail, publicVehicleDetailUrl, type BoardQuery, golemioHeaders, mapDepartureBoard, mapPublicVehicles, mapVehicleCollection, publicVehiclePositionsUrl, vehiclePositionsUrl, type VehicleDetails } from './golemio';
 import { PID_DATA_HOST, PID_STOPS_URL, buildStopIndex, searchStops, stopsInBBox, toAswId, type StopIndex } from './stops';
 import { PID_ALERTS_URL, PID_WEB_HOST, parseAlertsRss } from './alerts';
 
@@ -19,6 +19,10 @@ const INFO: ProviderInfo = {
 };
 
 interface Config { golemioKey: string | null; cache: SharedCache; bucket: TokenBucket; stopsFile?: string }
+
+import { METRO_SCHEMA } from '@/domain/metro';
+import { normalizeName } from './stops';
+import type { MetroLineGeo, TripDetail } from '@/domain/model';
 
 export function createPidProvider(cfg: Config): TransitProvider {
   /** Poslední polohy vozů (pro rozpoznání skutečně nového měření u veřejného endpointu). */
@@ -50,16 +54,18 @@ export function createPidProvider(cfg: Config): TransitProvider {
       const key = cfg.golemioKey;
       const headers = golemioHeaders(key);
       // Doplňující údaje (směr, vůz, zastávky) z plného endpointu: na pozadí po 30 s, polohy na ně nečekají.
+      type Full = { byTrip: Map<string, VehicleDetails>; vehicles: VehicleState[] };
+      const full = (): Full | null => cfg.cache.peek<Full>('pid:veh-details')?.value ?? null;
       const details = (): Map<string, VehicleDetails> => {
-        const e = cfg.cache.peek<Map<string, VehicleDetails>>('pid:veh-details');
-        if (!e || Date.now() - e.fetchedAt > 30_000) {
-          void cfg.cache.get('pid:veh-details', { ttlMs: 30_000, staleMs: 15 * 60_000, canFetch: () => cfg.bucket.take() }, async () => {
+        const e = cfg.cache.peek<Full>('pid:veh-details');
+        if (!e || Date.now() - e.fetchedAt > 10_000) {
+          void cfg.cache.get('pid:veh-details', { ttlMs: 10_000, staleMs: 15 * 60_000, canFetch: () => cfg.bucket.take() }, async () => {
             const raw = await fetchJson(vehiclePositionsUrl(), { provider: 'golemio', allowHosts: [GOLEMIO_HOST], headers, timeoutMs: 25_000, retries: 0, maxBytes: 60 * 1024 * 1024 });
             const { vehicles } = mapVehicleCollection(raw);
-            return new Map(vehicles.filter((v) => v.tripId).map((v) => [v.tripId as string, detailsOf(v)]));
+            return { byTrip: new Map(vehicles.filter((v) => v.tripId).map((v) => [v.tripId as string, detailsOf(v)])), vehicles };
           }).catch((e2) => log('warn', 'golemio.details.error', { error: e2 instanceof Error ? e2.message : String(e2) }));
         }
-        return e?.value ?? new Map();
+        return e?.value?.byTrip ?? new Map();
       };
       try {
         const r = await cfg.cache.get('pid:vehicles', { ttlMs: 2_500, staleMs: 180_000, canFetch: () => cfg.bucket.take() }, async () => {
@@ -69,6 +75,17 @@ export function createPidProvider(cfg: Config): TransitProvider {
             const { vehicles, invalid } = mapPublicVehicles(raw, details(), seen, Date.now());
             if (invalid) log('warn', 'golemio.public.invalid', { invalid, valid: vehicles.length });
             if (!vehicles.length) throw new Error('veřejný endpoint nevrátil žádná vozidla');
+            // Pojistka: co v lehkém zdroji chybí (např. celý druh dopravy), doplní plný zdroj, je-li poloha čerstvá.
+            const f = full();
+            if (f) {
+              const ids = new Set(vehicles.map((v) => v.id)), trips = new Set(vehicles.map((v) => v.tripId));
+              const now = Date.now();
+              for (const v of f.vehicles) {
+                if (ids.has(v.id) || (v.tripId && trips.has(v.tripId))) continue;
+                const t = v.measuredAt ? Date.parse(v.measuredAt) : NaN;
+                if (Number.isFinite(t) && now - t < 120_000) vehicles.push(v);
+              }
+            }
             return { vehicles, newest: Date.now() };
           } catch (e) {
             // Záloha: plný endpoint (pomalejší, ale se všemi údaji).
@@ -125,6 +142,43 @@ export function createPidProvider(cfg: Config): TransitProvider {
       } catch (err) {
         log('error', 'golemio.departures.error', { error: err instanceof Error ? err.message : String(err) });
         return { data: empty, meta: meta('golemio:departureboards', { status: 'error', reason: 'upstream_error', message: 'Odjezdy se nepodařilo načíst.' }) };
+      }
+    },
+
+    async trip(id: string) {
+      const m = id.match(/^pid:vehicle:reg-(\d{1,2})-([A-Za-z0-9_-]{1,24})$/);
+      const vehicleId = m ? `service-${m[1]}-${m[2]}` : null;
+      if (!vehicleId || !VEHICLE_ID_RE.test(vehicleId)) return { data: null, meta: meta('golemio:vehicle-detail', { status: 'error', reason: 'invalid_data', message: 'Pro tento vůz průběh spoje není k dispozici.' }) };
+      if (!cfg.golemioKey) return unavailable<TripDetail | null>(null, 'golemio:vehicle-detail', 'missing_api_key', 'Průběh spoje vyžaduje klíč Golemio API na serveru.');
+      const key = cfg.golemioKey;
+      try {
+        const r = await cfg.cache.get(`pid:trip:${vehicleId}`, { ttlMs: 15_000, staleMs: 120_000, canFetch: () => cfg.bucket.take() }, async () => {
+          const raw = await fetchJson(publicVehicleDetailUrl(vehicleId), { provider: 'golemio', allowHosts: [GOLEMIO_HOST], headers: golemioHeaders(key), timeoutMs: 8_000, retries: 1, maxBytes: 8 * 1024 * 1024 });
+          return mapVehicleDetail(raw, id);
+        });
+        return { data: r.value, meta: meta('golemio:vehicle-detail', { status: r.stale ? 'stale' : 'live', fetchedAt: new Date(r.fetchedAt).toISOString() }) };
+      } catch (err) {
+        log('error', 'golemio.trip.error', { error: err instanceof Error ? err.message : String(err) });
+        return { data: null, meta: meta('golemio:vehicle-detail', { status: 'error', reason: 'upstream_error', message: 'Průběh spoje se nepodařilo načíst.' }) };
+      }
+    },
+
+    async metro() {
+      try {
+        const s = await stopIndex();
+        const byName = new Map<string, StopGroup>();
+        for (const g of s.index.groups) if (g.modes.includes('metro')) byName.set(normalizeName(g.name), g);
+        const data: MetroLineGeo[] = (['A', 'B', 'C'] as const).map((line) => ({ line, stations: METRO_SCHEMA[line].map((st) => {
+          const g = byName.get(normalizeName(st.name));
+          const pts = g?.platforms.filter((p) => p.modes.includes('metro')) ?? [];
+          const lat = pts.length ? pts.reduce((a, p) => a + p.lat, 0) / pts.length : g?.lat ?? null;
+          const lon = pts.length ? pts.reduce((a, p) => a + p.lon, 0) / pts.length : g?.lon ?? null;
+          return { name: st.name, key: g?.key ?? null, lat, lon };
+        }) }));
+        return { data, meta: meta('pid:stops', { status: s.stale ? 'stale' : 'live', fetchedAt: new Date(s.fetchedAt).toISOString() }) };
+      } catch (err) {
+        log('error', 'pid.metro.error', { error: err instanceof Error ? err.message : String(err) });
+        return { data: [], meta: meta('pid:stops', { status: 'error', reason: 'upstream_error', message: 'Stanice metra se nepodařilo načíst.' }) };
       }
     },
 

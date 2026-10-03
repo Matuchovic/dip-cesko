@@ -39,7 +39,7 @@ export class VehicleLayer implements CustomLayerInterface {
   }
 
   setVehicles(vehicles: ModelVehicle[]) {
-    this.vehicles = vehicles;
+    this.vehicles = vehicles.filter((v) => Number.isFinite(v.lng) && Number.isFinite(v.lat) && Number.isFinite(v.bearing));
     this.dirty = true;
     this.map?.triggerRepaint();
   }
@@ -105,13 +105,18 @@ export class VehicleLayer implements CustomLayerInterface {
 
   render(_gl: WebGL2RenderingContext, args: CustomRenderMethodInput) {
     if (!this.map || !this.renderer || !this.enabled || this.map.getZoom() < MODEL_ZOOM) return;
-    if (this.dirty || this.map.getZoom() !== this.lastZoom) this.updateInstances(this.map.getZoom());
-    if (!this.vehicles.length) return;
-    this.camera.projectionMatrix.fromArray(args.defaultProjectionData.mainMatrix).multiply(this.transform);
-    this.camera.projectionMatrixInverse.copy(this.camera.projectionMatrix).invert();
-    this.renderer.resetState();
-    this.renderer.render(this.scene, this.camera);
-    this.renderer.resetState();
+    try {
+      if (this.dirty || this.map.getZoom() !== this.lastZoom) this.updateInstances(this.map.getZoom());
+      if (!this.vehicles.length) return;
+      this.camera.projectionMatrix.fromArray(args.defaultProjectionData.mainMatrix).multiply(this.transform);
+      this.camera.projectionMatrixInverse.copy(this.camera.projectionMatrix).invert();
+      this.renderer.resetState();
+      this.renderer.render(this.scene, this.camera);
+      this.renderer.resetState();
+    } catch (e) {
+      this.dirty = false;
+      console.warn('3D vozidla: vykreslení selhalo', e);
+    }
     // No perpetual triggerRepaint loop: the controller repaints only when data/camera changes.
   }
 

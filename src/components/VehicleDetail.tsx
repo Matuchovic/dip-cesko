@@ -8,7 +8,8 @@ import { formatClockSeconds } from '@/domain/time';
 import { detailAssetFor, detailVariant } from '@/map/assets';
 import { delayTexts, modeName, useT } from '@/i18n';
 import { DelayLabel, LineBadge } from './ui';
-import { IconClose, IconFollow, IconStar, IconWheelchair } from './icons';
+import { IconClose, IconFollow, IconRoute, IconStar, IconWheelchair } from './icons';
+import TLink from './TLink';
 
 export default function VehicleDetail() {
   const t = useT();
@@ -75,6 +76,7 @@ export default function VehicleDetail() {
         <button type="button" className="btn btn-secondary" aria-pressed={fav} onClick={() => toggleFavorite({ kind: 'line', key: lineKey, line: v.route.shortName, mode: v.route.mode, headsign: v.headsign, savedAt: new Date().toISOString() })}>
           <IconStar size={18} filled={fav} />{fav ? t('lineSaved') : t('saveLine')}
         </button>
+        <TLink className="btn btn-secondary" href={`/linka?l=${encodeURIComponent(v.route.shortName)}&m=${v.route.mode}`}><IconRoute size={18} />{t('line_open')}</TLink>
       </div>
       <p className="footer-note">{meta?.attribution ?? '—'}. {t('vd_note')}</p>
     </article>

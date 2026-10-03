@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { nsId } from '@/domain/ids';
 import { isValidBearing } from '@/domain/angles';
 import { inCzechia, isValidLngLat } from '@/domain/geo';
-import { knownDelay, UNKNOWN_DELAY, type Delay, type Departure, type Mode, type PositionState, type VehicleState } from '@/domain/model';
+import { knownDelay, UNKNOWN_DELAY, type Delay, type Departure, type Mode, type PositionState, type TripDetail, type TripStop, type VehicleState } from '@/domain/model';
 import { modeFromRouteType } from '@/domain/modes';
 import { parseInstant } from '@/domain/time';
 
@@ -214,10 +214,13 @@ export function mapPublicVehicles(raw: unknown, details: Map<string, VehicleDeta
     const mode = PUB_MODE[p.route_type ?? ''];
     if (typeof lon !== 'number' || typeof lat !== 'number' || !mode || !p.gtfs_route_short_name) { invalid++; continue; }
     if (p.state_position === 'canceled') continue;
-    const reg = (p.vehicle_id ?? '').match(/(\d+)\s*$/)?.[1] ?? null;
+    const vm = (p.vehicle_id ?? '').match(/(\d+)-(\d+)\s*$/);
+    const reg = vm?.[2] ?? null;
     const tripId = p.gtfs_trip_id ? nsId('pid', 'trip', p.gtfs_trip_id) : null;
     const d = tripId ? details.get(tripId) : undefined;
-    const id = nsId('pid', 'vehicle', d?.registration ?? reg ?? p.vehicle_id ?? p.gtfs_trip_id ?? `${lon},${lat}`);
+    // klíč shodný s plným endpointem (reg-<typ>-<vůz>), aby se tramvaj a autobus se stejným číslem nepřepsaly
+    const key = reg ? `reg-${vm?.[1] ?? 'x'}-${reg}` : p.gtfs_trip_id ? `trip-${p.gtfs_trip_id}` : `pos-${lon},${lat}`;
+    const id = nsId('pid', 'vehicle', key);
     const prev = seen.get(id);
     const at = prev && Math.abs(prev.lat - lat) < 1e-6 && Math.abs(prev.lon - lon) < 1e-6 ? prev.at : now;
     seen.set(id, { lat, lon, at });
@@ -233,4 +236,50 @@ export function mapPublicVehicles(raw: unknown, details: Map<string, VehicleDeta
   }
   if (seen.size > 6000) for (const k of [...seen.keys()].slice(0, seen.size - 6000)) seen.delete(k);
   return { vehicles: [...out.values()], invalid };
+}
+
+// ---------- Detail vozidla: zastávky spoje a tvar trasy (veřejný endpoint) ----------
+export const VEHICLE_ID_RE = /^service-\d{1,2}-[A-Za-z0-9_-]{1,24}$/;
+export function publicVehicleDetailUrl(vehicleId: string): string {
+  const p = new URLSearchParams();
+  for (const s of ['info', 'stop_times', 'shapes']) p.append('scopes[]', s);
+  return `${GOLEMIO_BASE}/v2/public/vehiclepositions/${encodeURIComponent(vehicleId)}?${p.toString()}`;
+}
+const Pt = z.object({ geometry: z.object({ coordinates: z.array(z.unknown()) }).passthrough().nullish(), properties: z.record(z.string(), z.unknown()).nullish() }).passthrough();
+const asStr = (v: unknown) => (typeof v === 'string' && v.trim() ? v : null);
+const asNum = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+
+/** Převod detailu vozidla na průběh spoje; tvar trasy se zředí (body aspoň 8 m od sebe, max. 2500). */
+export function mapVehicleDetail(raw: unknown, vehicleId: string): TripDetail | null {
+  const r = z.object({ route_type: nstr, route_short_name: nstr, trip_headsign: nstr, delay: nnum, last_stop_sequence: nnum,
+    stop_times: z.object({ features: z.array(z.unknown()) }).passthrough().nullish(), shapes: z.object({ features: z.array(z.unknown()) }).passthrough().nullish() }).passthrough().safeParse(raw);
+  if (!r.success) return null;
+  const d = r.data;
+  const mode = PUB_MODE[d.route_type ?? ''] ?? 'other';
+  const stops: TripStop[] = [];
+  for (const f of d.stop_times?.features ?? []) {
+    const p = Pt.safeParse(f);
+    if (!p.success) continue;
+    const [lon, lat] = (p.data.geometry?.coordinates ?? []) as unknown[];
+    const pr = p.data.properties ?? {};
+    const name = asStr(pr.stop_name), seq = asNum(pr.stop_sequence);
+    if (typeof lon !== 'number' || typeof lat !== 'number' || !name || seq === null) continue;
+    stops.push({ seq, name, lat, lon, arrival: asStr(pr.arrival_time), departure: asStr(pr.departure_time), arrivalRt: asStr(pr.realtime_arrival_time), departureRt: asStr(pr.realtime_departure_time) });
+  }
+  stops.sort((a, b) => a.seq - b.seq);
+  const shape: [number, number][] = [];
+  let last: [number, number] | null = null;
+  for (const f of d.shapes?.features ?? []) {
+    const p = Pt.safeParse(f);
+    if (!p.success) continue;
+    const [lon, lat] = (p.data.geometry?.coordinates ?? []) as unknown[];
+    if (typeof lon !== 'number' || typeof lat !== 'number') continue;
+    if (last && Math.hypot((lon - last[0]) * 71_500, (lat - last[1]) * 111_000) < 8) continue;
+    last = [lon, lat];
+    shape.push(last);
+    if (shape.length >= 2500) break;
+  }
+  if (stops.length < 2) return null;
+  return { vehicleId, line: d.route_short_name ?? '?', mode, headsign: d.trip_headsign ?? null, delay: typeof d.delay === 'number' ? knownDelay(d.delay) : UNKNOWN_DELAY,
+    lastStopSeq: typeof d.last_stop_sequence === 'number' ? d.last_stop_sequence : null, stops, shape };
 }

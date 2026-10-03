@@ -121,3 +121,10 @@ export interface PlanRequest {
   arriveBy: boolean;
   wheelchair: boolean;
 }
+
+/** Zastávka spoje (z detailu vozidla Golemio): plán i odhad podle skutečné polohy. */
+export interface TripStop { seq: number; name: string; lat: number; lon: number; arrival: string | null; departure: string | null; arrivalRt: string | null; departureRt: string | null }
+/** Průběh spoje: zastávky v pořadí, tvar trasy a poslední projetá zastávka. */
+export interface TripDetail { vehicleId: string; line: string; mode: Mode; headsign: string | null; delay: Delay; lastStopSeq: number | null; stops: TripStop[]; shape: [number, number][] }
+/** Linka metra se stanicemi v pořadí (souřadnice ze seznamu zastávek PID, klíč pro odjezdy). */
+export interface MetroLineGeo { line: 'A' | 'B' | 'C'; stations: { name: string; key: string | null; lat: number | null; lon: number | null }[] }

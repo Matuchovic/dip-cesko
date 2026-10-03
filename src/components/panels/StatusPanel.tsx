@@ -19,6 +19,7 @@ export default function StatusPanel() {
   useVisibleInterval(() => { void getJson<Status>('/api/status').then((r) => { setS(r.body); setErr(!r.ok); }); }, 30_000, []);
   const srcName = (id: string, fallback: string) => { const k = `src_${id}`; return k in MESSAGES.cs ? t(k as MessageKey) : fallback; };
   const tracks = mapApi.controller?.trackStats() ?? null;
+  const mine = Object.entries(mapApi.controller?.countsByMode() ?? {}) as [Mode, number][];
   return (
     <>
       <h1>{t('st_title')}</h1>
@@ -35,6 +36,7 @@ export default function StatusPanel() {
         <li className="row"><span className="row-main"><span className="row-title">{t('st_vehiclesBrowser')}</span><span className="row-sub">{feedError ?? (feed?.reason ? t(`reason_${feed.reason}` as MessageKey) : feed ? t('st_state', { s: feed.status }) : t('loading'))}{tracks && tracks.all > 0 ? ` · ${t('st_tracks', { on: tracks.on, all: tracks.all })}` : ''}</span></span></li>
       </ul>
       {s?.vehiclesByMode && Object.keys(s.vehiclesByMode).length > 0 && <p className="hint">{t('st_modes', { list: Object.entries(s.vehiclesByMode).sort((x, y) => y[1] - x[1]).map(([m, n]) => `${modesName(t, m as Mode)} ${n}`).join(' · ') })}</p>}
+      {mine.length > 0 && <p className="hint">{t('st_modesClient', { list: mine.sort((x, y) => y[1] - x[1]).map(([m, n]) => `${modesName(t, m)} ${n}`).join(' · ') })}</p>}
       <p className="footer-note">{t('st_footer')}</p>
     </>
   );
