@@ -6,7 +6,7 @@ const L = 'ar';
 export const ar: Messages = {
   appName: 'DopravaČR', appTagline: 'اعثر على رحلتك في أي وقت ومن أي مكان', skip: 'تخطَّ إلى المحتوى', brandAria: 'DopravaČR – الخريطة', navMain: 'التنقل الرئيسي',
   nav_map: 'الخريطة', nav_plan: 'الرحلات', nav_departures: 'المغادرات', nav_favorites: 'المفضلة', nav_tickets: 'التذاكر', nav_settings: 'الإعدادات',
-  mapRegion: 'خريطة المواصلات', panelMap: 'لوحة الخريطة', panelContent: 'المحتوى', sheetCollapse: 'طيّ اللوحة', sheetExpand: 'توسيع اللوحة', sheetHide: 'إخفاء اللوحة',
+  mapRegion: 'خريطة المواصلات', panelMap: 'لوحة الخريطة', panelContent: 'المحتوى', sheetCollapse: 'طيّ اللوحة', sheetExpand: 'توسيع اللوحة', close: 'Close', closeToMap: 'إغلاق والعودة إلى الخريطة', sheetHide: 'إخفاء اللوحة',
   vehicleDetail: 'تفاصيل المركبة', stopDetail: 'تفاصيل المحطة', searchPrompt: 'إلى أين تريد الذهاب؟',
   all: 'الكل', retry: 'إعادة المحاولة', refresh: 'تحديث', loading: 'جارٍ التحميل…', yes: 'نعم', no: 'لا', notStated: 'غير محدد',
   min: 'د', now: 'الآن', atStop: 'في المحطة', inMin: 'بعد {n} د', direction: 'باتجاه {h}', platform: 'الرصيف {p}', platformShort: 'رصيف {p}', platformUnknown: 'الرصيف غير محدد', canceled: 'ملغاة',

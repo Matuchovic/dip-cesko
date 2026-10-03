@@ -7,7 +7,7 @@ const L = 'cs';
 export const cs = {
   appName: 'DopravaČR', appTagline: 'najdi si spoj, kdykoliv, kdekoliv', skip: 'Přeskočit na obsah', brandAria: 'DopravaČR – mapa', navMain: 'Hlavní navigace',
   nav_map: 'Mapa', nav_plan: 'Spojení', nav_departures: 'Odjezdy', nav_favorites: 'Oblíbené', nav_tickets: 'Jízdenky', nav_settings: 'Nastavení',
-  mapRegion: 'Mapa dopravy', panelMap: 'Panel mapy', panelContent: 'Obsah', sheetCollapse: 'Sbalit panel', sheetExpand: 'Rozbalit panel', sheetHide: 'Schovat panel',
+  mapRegion: 'Mapa dopravy', panelMap: 'Panel mapy', panelContent: 'Obsah', sheetCollapse: 'Sbalit panel', sheetExpand: 'Rozbalit panel', close: 'Zavřít', closeToMap: 'Zavřít a zpět na mapu', sheetHide: 'Schovat panel',
   vehicleDetail: 'Detail vozidla', stopDetail: 'Detail zastávky', searchPrompt: 'Kam jedeš?',
   all: 'Vše', retry: 'Zkusit znovu', refresh: 'Obnovit', loading: 'Načítání…', yes: 'ano', no: 'ne', notStated: 'neuvedeno',
   min: 'min', now: 'teď', atStop: 'v zastávce', inMin: 'za {n} min', direction: 'směr {h}', platform: 'Nástupiště {p}', platformShort: 'nást. {p}', platformUnknown: 'Nástupiště neuvedeno', canceled: 'Zrušeno',

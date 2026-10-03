@@ -6,7 +6,7 @@ const L = 'de';
 export const de: Messages = {
   appName: 'DopravaČR', appTagline: 'finde deine Verbindung – jederzeit, überall', skip: 'Zum Inhalt springen', brandAria: 'DopravaČR – Karte', navMain: 'Hauptnavigation',
   nav_map: 'Karte', nav_plan: 'Verbindungen', nav_departures: 'Abfahrten', nav_favorites: 'Favoriten', nav_tickets: 'Fahrkarten', nav_settings: 'Einstellungen',
-  mapRegion: 'Verkehrskarte', panelMap: 'Kartenleiste', panelContent: 'Inhalt', sheetCollapse: 'Leiste einklappen', sheetExpand: 'Leiste ausklappen', sheetHide: 'Bereich ausblenden',
+  mapRegion: 'Verkehrskarte', panelMap: 'Kartenleiste', panelContent: 'Inhalt', sheetCollapse: 'Leiste einklappen', sheetExpand: 'Leiste ausklappen', close: 'Close', closeToMap: 'Schließen, zurück zur Karte', sheetHide: 'Bereich ausblenden',
   vehicleDetail: 'Fahrzeugdetails', stopDetail: 'Haltestellendetails', searchPrompt: 'Wohin möchten Sie?',
   all: 'Alle', retry: 'Erneut versuchen', refresh: 'Aktualisieren', loading: 'Wird geladen…', yes: 'ja', no: 'nein', notStated: 'nicht angegeben',
   min: 'Min.', now: 'jetzt', atStop: 'an der Haltestelle', inMin: 'in {n} Min.', direction: 'Richtung {h}', platform: 'Bahnsteig {p}', platformShort: 'Bstg. {p}', platformUnknown: 'Bahnsteig nicht angegeben', canceled: 'Fällt aus',

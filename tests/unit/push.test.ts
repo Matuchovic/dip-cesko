@@ -40,7 +40,7 @@ describe('upozornění: bezpečnost', () => {
 describe('upozornění: chytré doručení', () => {
   const T0 = Date.parse('2026-10-03T10:00:00+02:00');
   const w = (over: Partial<Watch> = {}): Watch => ({ id: '00000000-0000-4000-8000-000000000001', tokenHash: 'x', createdAt: '', reschedules: 0, subscription: { endpoint: 'https://fcm.googleapis.com/x', keys: { p256dh: 'p', auth: 'a' } },
-    stop: 'pid:Anděl', stopName: 'Anděl', line: '9', headsign: 'Spojovací', scheduledAt: new Date(T0).toISOString(), leadMin: 5, lang: 'cs', ...over });
+    stop: 'pid:Anděl', stopName: 'Anděl', line: '9', headsign: 'Spojovací', scheduledAt: new Date(T0).toISOString(), leadMin: 5, lang: 'cs', mode: 'tram', ...over }) as Watch;
   const dep = (delayS: number, canceled = false): Departure => ({ route: { shortName: '9', mode: 'tram' }, headsign: 'Spojovací', scheduledAt: new Date(T0).toISOString(), predictedAt: new Date(T0 + delayS * 1000).toISOString(),
     delay: knownDelay(delayS), platform: 'A', isCanceled: canceled } as unknown as Departure);
   const deps = (watch: Watch | null, list: Departure[], now: number) => {
@@ -52,7 +52,7 @@ describe('upozornění: chytré doručení', () => {
   it('včas: 5 min před odjezdem pošle upozornění a hlídání smaže', async () => {
     const { d, log } = deps(w(), [dep(0)], T0 - 5 * 60_000);
     expect(await fireWatch('id', d)).toBe('sent');
-    expect(log).toEqual(['send:Odjíždí za 5 min z Anděl · nást. A', 'remove']);
+    expect(log).toEqual(['send:📍 Anděl, nástupiště A\n✅ jede včas', 'remove']);
   });
   it('zpoždění 4 min: přeplánuje se přesně na nový čas (žádné předčasné upozornění)', async () => {
     const { d, log } = deps(w(), [dep(240)], T0 - 5 * 60_000);
@@ -65,10 +65,11 @@ describe('upozornění: chytré doručení', () => {
     expect(a.log[0]).toContain('zrušený');
     expect(await fireWatch('id', deps(null, [], T0).d)).toBe('missing');
   });
-  it('anglický text s nástupištěm a zpožděním', () => {
+  it('anglický text: smajlík druhu dopravy, tučný nadpis s minutami, řádek kde a řádek stavu; tlačítka', () => {
     const m = pushMessage(w({ lang: 'en' }), dep(120), T0 - 3 * 60_000, 'arrival');
-    expect(m.title).toBe('9 → Spojovací');
-    expect(m.body).toBe('Leaves in 5 min from Anděl · stop A · 2 min late');
+    expect(m.title).toBe('🚋 9 · in 5 min · Spojovací');
+    expect(m.body).toBe('📍 Anděl, stop A\n⏱️ 2 min late');
+    expect(m.actions.map((x) => x.action)).toEqual(['line', 'deps']);
     expect(m.url).toBe('/odjezdy?zastavka=pid%3AAnd%C4%9Bl');
   });
 });

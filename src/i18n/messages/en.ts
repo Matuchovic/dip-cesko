@@ -6,7 +6,7 @@ const L = 'en';
 export const en: Messages = {
   appName: 'DopravaČR', appTagline: 'find your connection, anytime, anywhere', skip: 'Skip to content', brandAria: 'DopravaČR – map', navMain: 'Main navigation',
   nav_map: 'Map', nav_plan: 'Journeys', nav_departures: 'Departures', nav_favorites: 'Favourites', nav_tickets: 'Tickets', nav_settings: 'Settings',
-  mapRegion: 'Transit map', panelMap: 'Map panel', panelContent: 'Content', sheetCollapse: 'Collapse panel', sheetExpand: 'Expand panel', sheetHide: 'Hide panel',
+  mapRegion: 'Transit map', panelMap: 'Map panel', panelContent: 'Content', sheetCollapse: 'Collapse panel', sheetExpand: 'Expand panel', close: 'Close', closeToMap: 'Close and back to map', sheetHide: 'Hide panel',
   vehicleDetail: 'Vehicle details', stopDetail: 'Stop details', searchPrompt: 'Where do you want to go?',
   all: 'All', retry: 'Try again', refresh: 'Refresh', loading: 'Loading…', yes: 'yes', no: 'no', notStated: 'not stated',
   min: 'min', now: 'now', atStop: 'at stop', inMin: 'in {n} min', direction: 'to {h}', platform: 'Platform {p}', platformShort: 'pl. {p}', platformUnknown: 'Platform not stated', canceled: 'Cancelled',

@@ -6,7 +6,7 @@ const L = 'it';
 export const it: Messages = {
   appName: 'DopravaČR', appTagline: 'trova il tuo collegamento, sempre e ovunque', skip: 'Vai al contenuto', brandAria: 'DopravaČR – mappa', navMain: 'Navigazione principale',
   nav_map: 'Mappa', nav_plan: 'Percorsi', nav_departures: 'Partenze', nav_favorites: 'Preferiti', nav_tickets: 'Biglietti', nav_settings: 'Impostazioni',
-  mapRegion: 'Mappa dei trasporti', panelMap: 'Pannello mappa', panelContent: 'Contenuto', sheetCollapse: 'Comprimi pannello', sheetExpand: 'Espandi pannello', sheetHide: 'Nascondi pannello',
+  mapRegion: 'Mappa dei trasporti', panelMap: 'Pannello mappa', panelContent: 'Contenuto', sheetCollapse: 'Comprimi pannello', sheetExpand: 'Espandi pannello', close: 'Close', closeToMap: 'Chiudi e torna alla mappa', sheetHide: 'Nascondi pannello',
   vehicleDetail: 'Dettagli veicolo', stopDetail: 'Dettagli fermata', searchPrompt: 'Dove vuoi andare?',
   all: 'Tutti', retry: 'Riprova', refresh: 'Aggiorna', loading: 'Caricamento…', yes: 'sì', no: 'no', notStated: 'non indicato',
   min: 'min', now: 'ora', atStop: 'in fermata', inMin: 'tra {n} min', direction: 'direzione {h}', platform: 'Banchina {p}', platformShort: 'banch. {p}', platformUnknown: 'Banchina non indicata', canceled: 'Soppresso',

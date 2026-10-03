@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.0 – 2026-10-03
+- Upozornění podle schváleného návrhu: smajlík druhu dopravy, v tučném nadpisu linka, za kolik minut a kam; pod tím kde (nástupiště) a stav (✅ včas / ⏱️ zpoždění / 🏃 vyraz hned); zrušený spoj (❌) nabídne další; na Androidu tlačítka „Kde je spoj“ a „Odjezdy“.
+- Tramvajový zvonek: když upozornění přijde při otevřené aplikaci, zazní dvojí „cink“ (zvuk se odemkne prvním dotykem).
+- Šipka pro schování panelu je přímo v úchytu – už se nepřekrývá s křížkem karty zastávky; klepnutí panel schová / vysune.
+- Křížek všude: každá obrazovka má vpravo nahoře křížek zpět na mapu, pole hledání má křížek pro smazání, nabídka zvonku i průvodce se dají zavřít křížkem.
+- iPhone: odstraněn prázdný pruh pod spodní lištou (aplikace na ploše s průhledným stavovým řádkem hlásí menší výšku okna – dorovnává se).
+
 ## 0.10.0 – 2026-10-03
 - Upozornění na blížící se spoj (Web Push): zvonek u odjezdu → 2, 5 nebo 10 min předem; funguje i se zavřenou aplikací. Server hlídání uloží (Upstash Redis), QStash ho probudí přesně v pravou chvíli, server znovu ověří živý odjezd – zpožděný spoj přeplánuje, zrušený nahlásí. Klepnutí na upozornění otevře odjezdy zastávky.
 - Bezpečnost upozornění: odesílání jen na push služby prohlížečů (žádné SSRF), podpis QStash (HS256, aktuální i příští klíč, kontrola těla a platnosti), tajný token pro zrušení (uložen jen jako hash), nejvýš 10 hlídání na zařízení, limity požadavků, data se samy mažou po odjezdu.

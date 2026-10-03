@@ -508,3 +508,32 @@ input, select, textarea { touch-action: manipulation; }
 .watch-pop button:hover { background: var(--primary-50); color: var(--primary-700); }
 .watch-msg { position: absolute; z-index: 30; right: 0; top: 44px; width: max-content; max-width: 240px; padding: 8px 12px; border-radius: 12px; background: #0F2341; color: #fff; font-size: 13px; line-height: 18px; font-weight: 600; box-shadow: 0 12px 28px rgba(15,35,65,.3); animation: pop 260ms cubic-bezier(.22,1.4,.36,1); }
 @media (prefers-reduced-motion: reduce) { .watch-btn.on, .watch-pop, .watch-msg { animation: none; } }
+
+/* ---------- úchyt panelu se šipkou (nahrazuje samostatné tlačítko – nic se nepřekrývá) ---------- */
+.sheet-toggle { display: none !important; }
+@media (max-width: 899px) {
+  .sheet-handle { height: 30px; display: flex !important; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--ink-3); }
+  .sheet-handle .grip { width: 40px; height: 5px; border-radius: 3px; background: linear-gradient(180deg, #C9D2DE, #DCE3EC); box-shadow: inset 0 1px 1px rgba(11,18,32,.18); }
+  .sheet-handle .chev { transition: transform 380ms cubic-bezier(.22, 1.4, .36, 1), color 200ms ease; }
+  .sheet-handle.up .chev { transform: rotate(180deg); color: var(--primary-600); }
+  .sheet-handle:hover .chev { color: var(--primary-600); }
+  .sheet-handle span:not(.grip) { display: none; }
+}
+/* ---------- křížek „zpět na mapu“ u každé obrazovky ---------- */
+.panel-close { position: absolute; z-index: 5; top: 12px; right: 12px; width: 40px; height: 40px; border-radius: 20px; display: grid; place-items: center; color: var(--ink-2);
+  background: var(--surface-solid); box-shadow: 0 0 0 1px var(--line), 0 4px 12px rgba(15,35,65,.10); transition: transform 200ms cubic-bezier(.22,1.5,.36,1), background 200ms ease, color 200ms ease; }
+.panel-close:hover { background: var(--primary-50); color: var(--primary-700); transform: rotate(90deg); }
+.panel-close:active { transform: scale(.92); }
+.page-host .panel-scroll > h1:first-child, .page-host .panel-scroll > :first-child h1 { padding-right: 48px; }
+.watch-pop-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.watch-x { width: 28px; height: 28px; border-radius: 14px; border: 0; background: var(--surface-2, #F4F6F9); color: var(--ink-2); font-size: 18px; line-height: 1; cursor: pointer; }
+.watch-x:hover { background: var(--primary-50); color: var(--primary-700); }
+.ob-x { margin-left: 6px; font-size: 16px; font-weight: 800; }
+/* ---------- iPhone: bez prázdného pruhu pod lištou ---------- */
+.app { bottom: calc(-1 * var(--ios-gap, 0px)); }
+
+.field { position: relative; }
+.search-clear { position: absolute; right: 8px; bottom: 7px; width: 34px; height: 34px; border-radius: 17px; border: 0; background: var(--surface-2, #F1F4F9); color: var(--ink-2); font-size: 20px; line-height: 1; cursor: pointer; display: grid; place-items: center; transition: background 160ms ease, color 160ms ease, transform 160ms ease; }
+.search-clear:hover { background: var(--primary-50); color: var(--primary-700); }
+.search-clear:active { transform: scale(.9); }
+.field .input { padding-right: 48px; }

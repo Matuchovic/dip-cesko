@@ -39,6 +39,7 @@ export const WatchInput = z.object({
   subscription: z.object({ endpoint: z.string().url().max(800), keys: z.object({ p256dh: b64u.min(80).max(120), auth: b64u.min(16).max(40) }) }),
   stop: z.string().min(1).max(80), stopName: z.string().min(1).max(80),
   line: z.string().regex(/^[A-Za-z0-9]{1,6}$/), headsign: z.string().max(80).nullable(),
+  mode: z.enum(['tram', 'metro', 'bus', 'trolleybus', 'train', 'ferry', 'funicular', 'other']).default('bus'),
   scheduledAt: z.string().datetime({ offset: true }), leadMin: z.union([z.literal(2), z.literal(5), z.literal(10)]),
   lang: z.enum(['cs', 'en']).default('cs'),
 });
@@ -81,25 +82,51 @@ export function verifyQstashSignature(jwt: string | null, rawBody: string, keys:
 }
 
 // ---------- texty upozornění ----------
-export function pushMessage(w: Watch, d: Departure | null, now: number, kind: 'arrival' | 'canceled'): { title: string; body: string; url: string; tag: string } {
+const EMOJI: Record<string, string> = { tram: '🚋', metro: '🚇', bus: '🚌', trolleybus: '🚎', train: '🚆', ferry: '⛴️', funicular: '🚠', other: '🚏' };
+const clock = (ms: number) => new Intl.DateTimeFormat('cs-CZ', { timeZone: 'Europe/Prague', hour: '2-digit', minute: '2-digit' }).format(ms);
+export interface PushMessage { title: string; body: string; url: string; tag: string; actions: { action: string; title: string; url: string }[] }
+
+/**
+ * Upozornění: to hlavní v nadpisu (telefon ho zobrazí tučně) – druh dopravy, linka, za kolik minut, kam;
+ * 2. řádek kde, 3. řádek stav a co dělat. Zrušený spoj nabídne další spoj stejné linky.
+ */
+export function pushMessage(w: Watch, d: Departure | null, now: number, kind: 'arrival' | 'canceled', next: Departure | null = null): PushMessage {
   const en = w.lang === 'en';
-  const title = `${w.line} → ${w.headsign ?? w.stopName}`;
-  const url = `/odjezdy?zastavka=${encodeURIComponent(w.stop)}`;
-  if (kind === 'canceled') return { title, body: en ? `Cancelled — this ${w.line} won’t leave ${w.stopName}.` : `Spoj je zrušený – z ${w.stopName} nepojede.`, url, tag: `watch-${w.id}` };
+  const mode = d?.route.mode ?? w.mode ?? 'bus';
+  const emoji = EMOJI[mode] ?? EMOJI.other!;
+  const dest = w.headsign ?? w.stopName;
+  const deps = `/odjezdy?zastavka=${encodeURIComponent(w.stop)}`;
+  const line = `/linka?l=${encodeURIComponent(w.line)}&m=${encodeURIComponent(mode)}`;
+  const tag = `watch-${w.id}`;
+  if (kind === 'canceled') {
+    const at = clock(Date.parse(w.scheduledAt));
+    const nm = next ? Math.max(0, Math.round((Date.parse(next.predictedAt ?? next.scheduledAt ?? '') - now) / 60_000)) : null;
+    return {
+      title: en ? `❌ ${w.line} · ${dest} is cancelled` : `❌ ${w.line} · ${dest} nepojede`,
+      body: (en ? `The ${at} departure is cancelled.` : `Spoj v ${at} je zrušený.`) + (nm !== null ? (en ? `\n➡️ Next ${w.line} in ${nm} min.` : `\n➡️ Další ${w.line} jede za ${nm} min.`) : ''),
+      url: deps, tag, actions: [{ action: 'deps', title: en ? 'Next departure' : 'Ukázat další spoj', url: deps }],
+    };
+  }
   const dep = d ? Date.parse(d.predictedAt ?? d.scheduledAt ?? w.scheduledAt) : Date.parse(w.scheduledAt);
   const min = Math.max(0, Math.round((dep - now) / 60_000));
+  const when = min <= 0 ? (en ? 'now' : 'teď') : (en ? `in ${min} min` : `za ${min} min`);
+  const plat = d?.platform ? (en ? `, stop ${d.platform}` : `, nástupiště ${d.platform}`) : '';
   const late = d && d.delay.kind === 'known' && d.delay.seconds >= 60 ? Math.round(d.delay.seconds / 60) : 0;
-  const plat = d?.platform ? (en ? ` · stop ${d.platform}` : ` · nást. ${d.platform}`) : '';
-  const lead = en ? (min <= 0 ? `Leaves now from ${w.stopName}` : `Leaves in ${min} min from ${w.stopName}`) : (min <= 0 ? `Odjíždí teď z ${w.stopName}` : `Odjíždí za ${min} min z ${w.stopName}`);
-  const delay = late ? (en ? ` · ${late} min late` : ` · zpoždění ${late} min`) : '';
-  return { title, body: `${lead}${plat}${delay}`, url, tag: `watch-${w.id}` };
+  const status = late ? (en ? `⏱️ ${late} min late` : `⏱️ ${late} min zpoždění`) : d?.delay.kind === 'known' ? (en ? '✅ on time' : '✅ jede včas') : (en ? '🕒 per timetable' : '🕒 podle jízdního řádu');
+  const hurry = min <= 3 ? (en ? ' · 🏃 leave now' : ' · 🏃 vyraz hned') : '';
+  return {
+    title: `${emoji} ${w.line} · ${when} · ${dest}`,
+    body: `📍 ${w.stopName}${plat}\n${status}${hurry}`,
+    url: deps, tag,
+    actions: [{ action: 'line', title: en ? 'Where is it' : 'Kde je spoj', url: line }, { action: 'deps', title: en ? 'Departures' : 'Odjezdy', url: deps }],
+  };
 }
 
 // ---------- vlastní logika doručení (oddělená od sítě kvůli testům) ----------
 export interface FireDeps {
   load(id: string): Promise<Watch | null>; save(w: Watch, ttlS: number): Promise<void>; remove(id: string): Promise<void>;
   departures(stop: string): Promise<Departure[]>; publish(id: string, delayS: number): Promise<void>;
-  send(w: Watch, msg: ReturnType<typeof pushMessage>): Promise<'ok' | 'gone' | 'error'>; now(): number;
+  send(w: Watch, msg: PushMessage): Promise<'ok' | 'gone' | 'error'>; now(): number;
 }
 export async function fireWatch(id: string, deps: FireDeps): Promise<'missing' | 'rescheduled' | 'sent' | 'canceled' | 'gone' | 'expired'> {
   const w = await deps.load(id);
@@ -108,7 +135,9 @@ export async function fireWatch(id: string, deps: FireDeps): Promise<'missing' |
   const list = await deps.departures(w.stop).catch(() => [] as Departure[]);
   const d = list.find((x) => x.route.shortName === w.line && (!w.headsign || x.headsign === w.headsign) && Math.abs(Date.parse(x.scheduledAt ?? '') - sched) <= 120_000) ?? null;
   if (d?.isCanceled) {
-    const r = await deps.send(w, pushMessage(w, d, now, 'canceled'));
+    const next = list.filter((x) => x !== d && !x.isCanceled && x.route.shortName === w.line && (!w.headsign || x.headsign === w.headsign) && Date.parse(x.predictedAt ?? x.scheduledAt ?? '') > now)
+      .sort((a, b) => Date.parse(a.predictedAt ?? a.scheduledAt ?? '') - Date.parse(b.predictedAt ?? b.scheduledAt ?? ''))[0] ?? null;
+    const r = await deps.send(w, pushMessage(w, d, now, 'canceled', next));
     await deps.remove(id);
     return r === 'gone' ? 'gone' : 'canceled';
   }
@@ -155,7 +184,7 @@ export function qstash(cfg: PushConfig) {
 }
 export function sender(cfg: PushConfig) {
   webpush.setVapidDetails(cfg.subject, cfg.vapidPublic, cfg.vapidPrivate);
-  return async (w: Watch, msg: ReturnType<typeof pushMessage>): Promise<'ok' | 'gone' | 'error'> => {
+  return async (w: Watch, msg: PushMessage): Promise<'ok' | 'gone' | 'error'> => {
     if (!isAllowedPushEndpoint(w.subscription.endpoint)) return 'gone';
     try {
       await webpush.sendNotification(w.subscription, JSON.stringify(msg), { TTL: 600, urgency: 'high', topic: msg.tag.slice(0, 32).replace(/[^A-Za-z0-9_-]/g, '') });

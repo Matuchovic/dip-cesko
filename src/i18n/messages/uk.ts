@@ -6,7 +6,7 @@ const L = 'uk';
 export const uk: Messages = {
   appName: 'DopravaČR', appTagline: 'знайди своє сполучення будь-коли й будь-де', skip: 'Перейти до вмісту', brandAria: 'DopravaČR – мапа', navMain: 'Головна навігація',
   nav_map: 'Мапа', nav_plan: 'Маршрути', nav_departures: 'Відправлення', nav_favorites: 'Обране', nav_tickets: 'Квитки', nav_settings: 'Налаштування',
-  mapRegion: 'Мапа транспорту', panelMap: 'Панель мапи', panelContent: 'Вміст', sheetCollapse: 'Згорнути панель', sheetExpand: 'Розгорнути панель', sheetHide: 'Сховати панель',
+  mapRegion: 'Мапа транспорту', panelMap: 'Панель мапи', panelContent: 'Вміст', sheetCollapse: 'Згорнути панель', sheetExpand: 'Розгорнути панель', close: 'Close', closeToMap: 'Закрити й повернутися до мапи', sheetHide: 'Сховати панель',
   vehicleDetail: 'Деталі транспортного засобу', stopDetail: 'Деталі зупинки', searchPrompt: 'Куди вам потрібно?',
   all: 'Усі', retry: 'Спробувати знову', refresh: 'Оновити', loading: 'Завантаження…', yes: 'так', no: 'ні', notStated: 'не вказано',
   min: 'хв', now: 'зараз', atStop: 'на зупинці', inMin: 'за {n} хв', direction: 'напрямок {h}', platform: 'Платформа {p}', platformShort: 'пл. {p}', platformUnknown: 'Платформу не вказано', canceled: 'Скасовано',

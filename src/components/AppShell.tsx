@@ -9,6 +9,7 @@ import { useMediaQuery, useNow } from '@/lib/hooks';
 import { hydrateFavorites } from '@/lib/favorites';
 import { initInstall } from '@/lib/install';
 import { initOnboarding } from '@/lib/onboarding';
+import { playTramBell, unlockAudio } from '@/lib/sound';
 import Onboarding from './Onboarding';
 import { hydrateSettings, prefersReducedMotion, settingsStore } from '@/lib/settings';
 import { IconClock, IconMap, IconRoute, IconSearch, IconSettings, IconStar, IconTicket } from './icons';
@@ -56,6 +57,20 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
     hydrateFavorites();
     initInstall();
     initOnboarding();
+    // zvuk smí hrát až po interakci: odemknout prvním dotykem
+    const unlock = () => { unlockAudio(); window.removeEventListener('pointerdown', unlock); };
+    window.addEventListener('pointerdown', unlock);
+    // upozornění na spoj přišlo, když je aplikace otevřená → tramvajový zvonek
+    const onMsg = (e: MessageEvent) => { if ((e.data as { type?: string } | null)?.type === 'dopravacr-alert') playTramBell(); };
+    navigator.serviceWorker?.addEventListener('message', onMsg);
+    // iPhone v režimu aplikace s průhledným stavovým řádkem hlásí výšku okna menší o stavový řádek → dorovnat
+    const fixVh = () => {
+      const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && (navigator as Navigator & { standalone?: boolean }).standalone === true;
+      const gap = ios ? Math.round(window.screen.height - window.innerHeight) : 0;
+      document.documentElement.style.setProperty('--ios-gap', `${gap > 0 && gap < 90 && window.innerWidth < window.innerHeight ? gap : 0}px`);
+    };
+    fixVh();
+    window.addEventListener('resize', fixVh);
     const apply = () => { document.documentElement.dataset.motion = prefersReducedMotion(settingsStore.get()) ? 'reduce' : 'full'; };
     apply();
     const unsub = settingsStore.subscribe(apply);
@@ -81,7 +96,8 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
     const vh = window.innerHeight;
     const snaps = [COLLAPSED, PEEK, Math.round(vh * 0.52), vh - 150];
     // klepnutí: schovaný → náhled → půl → zpět náhled
-    if (moved < 6) { setSheetH((h) => (h <= COLLAPSED + 10 ? PEEK : h <= PEEK + 10 ? snaps[2]! : PEEK)); return; }
+    // klepnutí na úchyt: schovaný → vysunout, jinak schovat (šipka ukazuje směr)
+    if (moved < 6) { setSheetH((h) => (h <= COLLAPSED + 10 ? PEEK : COLLAPSED)); return; }
     setSheetH((h) => snaps.reduce((a, b) => (Math.abs(b - h) < Math.abs(a - h) ? b : a)));
   };
 
@@ -133,15 +149,15 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
       <main id="main" ref={sheetRef} data-collapsed={sheetMode && sheetH <= COLLAPSED + 10 ? 'true' : undefined} className={`panel ${sheetMode ? 'sheet-host' : 'page-host'}`} aria-label={isMapRoute ? t('panelMap') : t('panelContent')} tabIndex={-1}
         onFocus={(e) => { if (sheetMode && (e.target as HTMLElement).tagName === 'INPUT') setSheetH(Math.round(window.innerHeight - 150)); }}>
         {sheetMode && (
-          <button type="button" className="sheet-handle" aria-label={sheetH > PEEK + 10 ? t('sheetCollapse') : t('sheetExpand')} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
-            <span />
+          <button type="button" className={`sheet-handle${sheetH <= COLLAPSED + 10 ? ' up' : ''}`} aria-expanded={sheetH > COLLAPSED + 10}
+            aria-label={sheetH <= COLLAPSED + 10 ? t('sheetExpand') : t('sheetHide')}
+            onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
+            <span className="grip" />
+            <svg className="chev" width="16" height="16" viewBox="0 0 24 24" aria-hidden><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
         )}
-        {sheetMode && (
-          <button type="button" className={`sheet-toggle${sheetH <= COLLAPSED + 10 ? ' up' : ''}`} aria-expanded={sheetH > COLLAPSED + 10}
-            aria-label={sheetH <= COLLAPSED + 10 ? t('sheetExpand') : t('sheetHide')} onClick={() => setSheetH((h) => (h <= COLLAPSED + 10 ? PEEK : COLLAPSED))}>
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          </button>
+        {!sheetMode && !isMapRoute && (
+          <TLink href="/" className="panel-close" aria-label={t('closeToMap')}><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" /></svg></TLink>
         )}
         <div className="panel-scroll">{panelContent}</div>
       </main>

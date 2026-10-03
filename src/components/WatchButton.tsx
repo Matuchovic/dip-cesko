@@ -36,7 +36,7 @@ export default function WatchButton({ stop, stopName, d }: { stop: string; stopN
       </button>
       {open && (
         <span className="watch-pop" role="menu" aria-label={t('watch_pick')}>
-          <span className="watch-pop-title">{t('watch_pick')}</span>
+          <span className="watch-pop-head"><span className="watch-pop-title">{t('watch_pick')}</span><button type="button" className="watch-x" aria-label={t('close')} onClick={(e) => { e.stopPropagation(); setOpen(false); }}>×</button></span>
           {LEADS.map((n) => <button key={n} type="button" role="menuitem" disabled={busy} onClick={(e) => { e.stopPropagation(); void choose(n); }}>{t('watch_lead', { n })}</button>)}
         </span>
       )}

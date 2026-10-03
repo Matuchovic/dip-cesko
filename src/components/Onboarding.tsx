@@ -64,7 +64,7 @@ function OnboardingFlow() {
       <div className="ob-blob a" /><div className="ob-blob b" /><div className="ob-blob c" />
       <div className="ob-top">
         <div className="ob-prog" aria-hidden>{Array.from({ length: STEPS }, (_, i) => <i key={i}><b style={{ width: i <= step ? '100%' : '0%' }} /></i>)}</div>
-        <button type="button" className="ob-skip" onClick={() => closeOnboarding('skip')}>{t('ob_skip')}</button>
+        <button type="button" className="ob-skip" onClick={() => closeOnboarding('skip')}>{t('ob_skip')}<span aria-hidden className="ob-x">×</span></button>
       </div>
       <div className="ob-screen" key={step}>
         <div className={`ob-ill${[0, 3, 4, 5].includes(step) ? ' compact' : ''}`} aria-hidden>

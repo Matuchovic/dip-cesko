@@ -1,5 +1,5 @@
 /* Doprava – service worker: offline obal aplikace a poslední data s jasně označeným stářím. */
-const VERSION = 'doprava-v10';
+const VERSION = 'doprava-v11';
 const SHELL = `${VERSION}-shell`, STATIC = `${VERSION}-static`, API = `${VERSION}-api`;
 const SHELL_URLS = ['/', '/odjezdy', '/spojeni', '/oblibene', '/jizdenky', '/nastaveni', '/map/offline-style.json', '/icons/icon-192.png', '/brand/logo.png', '/brand/logo-dark.png', '/favicon.ico'];
 const STATIC_PREFIXES = ['/_next/static/', '/vehicles/', '/icons/', '/map/', '/maplibre/'];
@@ -61,18 +61,27 @@ async function navigate(req) {
 }
 
 // ---------- upozornění na blížící se spoj (Web Push) ----------
+const safeUrl = (u) => (typeof u === 'string' && u.startsWith('/') && !u.startsWith('//') ? u : '/');
 self.addEventListener('push', (event) => {
-  let msg = { title: 'DopravaČR', body: '', url: '/', tag: 'dopravacr' };
+  let msg = { title: 'DopravaČR', body: '', url: '/', tag: 'dopravacr', actions: [] };
   try { if (event.data) msg = { ...msg, ...event.data.json() }; } catch { /* prostý text */ }
-  const url = typeof msg.url === 'string' && msg.url.startsWith('/') ? msg.url : '/';
-  event.waitUntil(self.registration.showNotification(String(msg.title).slice(0, 80), {
-    body: String(msg.body).slice(0, 200), tag: String(msg.tag).slice(0, 64), renotify: true, requireInteraction: false,
-    icon: '/icons/icon-192.png', badge: '/icons/favicon-32.png', data: { url }, vibrate: [120, 60, 120],
-  }));
+  const actions = (Array.isArray(msg.actions) ? msg.actions : []).slice(0, 2).map((a) => ({ action: String(a.action).slice(0, 16), title: String(a.title).slice(0, 30) }));
+  const urls = { _: safeUrl(msg.url) };
+  for (const a of Array.isArray(msg.actions) ? msg.actions.slice(0, 2) : []) urls[String(a.action).slice(0, 16)] = safeUrl(a.url);
+  event.waitUntil((async () => {
+    await self.registration.showNotification(String(msg.title).slice(0, 90), {
+      body: String(msg.body).slice(0, 240), tag: String(msg.tag).slice(0, 64), renotify: true, requireInteraction: false, timestamp: Date.now(),
+      icon: '/icons/icon-192.png', badge: '/icons/favicon-32.png', data: { urls }, actions, vibrate: [90, 70, 90, 70, 160],
+    });
+    // otevřená aplikace zahraje tramvajový zvonek a ukáže upozornění i v sobě
+    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of all) c.postMessage({ type: 'dopravacr-alert', title: String(msg.title).slice(0, 90), body: String(msg.body).slice(0, 240), url: urls._ });
+  })());
 });
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin).href;
+  const urls = (event.notification.data && event.notification.data.urls) || {};
+  const url = new URL(safeUrl(urls[event.action] || urls._ || '/'), self.location.origin).href;
   event.waitUntil((async () => {
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const c of all) { if (new URL(c.url).origin === self.location.origin) { await c.focus(); if ('navigate' in c) await c.navigate(url); return; } }

@@ -44,7 +44,7 @@ export async function watchDeparture(stop: string, stopName: string, d: Departur
   if (typeof sub === 'string') return sub;
   const res = await fetch('/api/push/watch', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ subscription: sub.toJSON(), stop, stopName, line: d.route.shortName, headsign: d.headsign, scheduledAt: d.scheduledAt, leadMin, lang }),
+    body: JSON.stringify({ subscription: sub.toJSON(), stop, stopName, line: d.route.shortName, mode: d.route.mode, headsign: d.headsign, scheduledAt: d.scheduledAt, leadMin, lang }),
   }).catch(() => null);
   if (!res) return 'error';
   if (res.status === 503) return 'unavailable';

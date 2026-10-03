@@ -61,6 +61,7 @@ export default function StopSearch({ label, placeholder, onSelect, initial = '',
       <input id={`${id}-in`} className="input" role="combobox" aria-expanded={showList} aria-controls={listId} aria-autocomplete="list"
         aria-activedescendant={showList && items[active] ? `${id}-o${active}` : undefined} value={q} placeholder={placeholder} autoComplete="off" autoFocus={autoFocus}
         onChange={(e) => { setQ(e.target.value); setOpen(true); if (!e.target.value) onSelect(null, ''); }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)} onKeyDown={onKey} />
+      {q && <button type="button" className="search-clear" aria-label={t('close')} onMouseDown={(e) => e.preventDefault()} onClick={() => { setQ(''); setOpen(false); onSelect(null, ''); }}>×</button>}
       {showList && (
         <ul id={listId} role="listbox" className="combo-list" aria-label={label}>
           {extraOption && <li role="option" aria-selected={false} onMouseDown={(e) => { e.preventDefault(); setQ(extraOption.label); setOpen(false); extraOption.onPick(); }}><strong>{extraOption.label}</strong></li>}
