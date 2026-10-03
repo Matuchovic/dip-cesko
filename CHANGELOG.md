@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.15.0 – 2026-10-03
+- Nový úvodní průvodce: 10 kroků, každý jedna funkce – jazyk, živá mapa (barvy zpoždění), odjezdy a rady, zvonek a připomínky (s přehráním zvonku), spojení, památky, pruh novinek, ovládání panelu a aktualizace, nastavení na 3 klepnutí (plocha, upozornění, poloha), Domů a Do práce. Animace přesně ukazují, kam klepnout (pulzující kroužek), plynulé 3D přechody, konfety z čísel linek. Mobil: celá obrazovka, listování přejetím prstem. Počítač: dvousloupcové okno, šipky ← → a Esc. Klepnutím na proužek nahoře skočíš na libovolný krok.
+- Rychlost: 3D knihovna (three.js) se stahuje až po prvním vykreslení mapy jako samostatný balík; průvodce se stahuje, jen když se má ukázat; během tažení mapou se štítky vozidel obnovují méně často (plynulejší pohyb); obrázky loga a ikon ve WebP (průvodce dřív stahoval 475 kB PNG); dlouhé seznamy karet se vykreslují až při posunu k nim; na telefonech levnější efekty karet.
+- Hlavička na počítači: pod logem je vidět popis „najdi si spoj, kdykoliv, kdekoliv“.
+
 ## 0.14.0 – 2026-10-03
 - Aktualizace jako na MatuchaDev: aplikace zná otisk svého sestavení (na Vercelu hash commitu) a porovnává ho s /api/version – 3 s po startu, každou minutu, při návratu do aplikace a po obnovení signálu; po nálezu přestane. Dole vyjede skleněný ostrov s obíhajícím světlem „Nová verze X“ a „stará → nová“ (jen čísla verzí), tlačítko Aktualizovat (krátká obrazovka načítání s logem) a křížek. Kdo lištu zavře nebo ji přehlédne, dostane novou verzi sám při přechodu do jiné sekce – nikdy během psaní. Servisní pracovník přijímá pokyn k převzetí.
 - Karty ve 3D podle MatuchaDev: skleněná obruba kolem desky, pětivrstvý stín s modrou září, náklon za kurzorem s posouvajícím se leskem (na dotyku jemné zamáčknutí), tmavý režim, bez animací při omezení pohybu.

@@ -1,4 +1,5 @@
 'use client';
+import { onboardingStore } from '@/lib/onboarding';
 import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { appStore, latestVehicles, mapApi } from '@/lib/app-state';
@@ -66,7 +67,11 @@ export default function MapView({ styleUrl, demo }: { styleUrl: string; demo: bo
         const b = m.getBounds(), dx = (b.getEast() - b.getWest()) * 0.5, dy = (b.getNorth() - b.getSouth()) * 0.5;
         return `?bbox=${[b.getWest() - dx, b.getSouth() - dy, b.getEast() + dx, b.getNorth() + dy].map((n) => n.toFixed(5)).join(',')}`;
       });
-      feed.start();
+      // úvodní průvodce zakrývá mapu: nestahovat polohy ani neanimovat, dokud je otevřený
+      let onbOpen: boolean | null = null; // reagovat jen na skutečnou změnu – jinak by se stahování spustilo dvakrát
+      const applyOnb = () => { const open = onboardingStore.get().open; if (open === onbOpen) return; onbOpen = open; controller?.setPaused(open); if (open) feed.stop(); else feed.start(); };
+      applyOnb();
+      const unsubOnb = onboardingStore.subscribe(applyOnb);
       controller?.map.on('moveend', () => feed.refreshSoon());
       if (demo) (window as unknown as { __doprava?: unknown }).__doprava = { controller, map: controller?.map ?? null, feed };
 
@@ -75,7 +80,7 @@ export default function MapView({ styleUrl, demo }: { styleUrl: string; demo: bo
       const unsubModes = appStore.subscribe(() => { const m = appStore.get().modes; if (m !== lastModes) { lastModes = m; controller?.setModes(m); } });
       const ro = new ResizeObserver(() => controller?.resize());
       ro.observe(el.current);
-      cleanup = () => { feed.stop(); unsubSettings(); unsubModes(); ro.disconnect(); controller?.destroy(); mapApi.controller = null; appStore.set({ mapReady: false }); };
+      cleanup = () => { feed.stop(); unsubSettings(); unsubOnb(); unsubModes(); ro.disconnect(); controller?.destroy(); mapApi.controller = null; appStore.set({ mapReady: false }); };
     })();
     return () => { disposed = true; cleanup?.(); };
   }, [styleUrl, demo, rotation]);

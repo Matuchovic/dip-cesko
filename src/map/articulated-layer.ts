@@ -6,14 +6,8 @@ import {
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { VehicleAsset } from './assets';
 
-/** Vzhled podle dodaných ilustrací: bílá karoserie, černý pás oken, barevný spodek a čelo. */
-interface Livery { base: number; roof: number; accent: string; glass: string; body: string; bidirectional: boolean }
-const LIVERY: Record<string, Livery> = {
-  'tram-top-redwhite': { base: 0.32, roof: 3.3, accent: '#C8102E', glass: '#14171C', body: '#F3F4F6', bidirectional: false },
-  'train-top-bluewhite': { base: 0.55, roof: 4.05, accent: '#1F4FB5', glass: '#14171C', body: '#F2F3F5', bidirectional: true },
-};
-export const ARTICULATED_ASSETS = Object.keys(LIVERY);
-export const roofHeight = (assetId: string) => LIVERY[assetId]?.roof ?? 3.4;
+import { LIVERY, ARTICULATED_ASSETS, roofHeight, type Livery } from './articulated-shared';
+export { ARTICULATED_ASSETS, roofHeight };
 
 export interface SectionPlacement { lng: number; lat: number; bearing: number }
 export interface ArticulatedVehicle {

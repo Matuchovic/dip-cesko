@@ -72,7 +72,7 @@ export default function UpdateBanner() {
   if (booting && next) {
     return (
       <div className="upd-boot" role="status" aria-live="assertive">
-        <img src="/icons/icon-192.png" alt="" width={96} height={96} className="upd-boot-logo" />
+        <img src="/icons/icon-256.webp" alt="" width={96} height={96} className="upd-boot-logo" />
         <strong>DopravaČR</strong>
         <span>{t('upd_boot', { v: next.version })}</span>
         <span className="upd-boot-bar" aria-hidden><i /></span>
@@ -84,7 +84,7 @@ export default function UpdateBanner() {
     <div className="upd" role="status" aria-live="polite">
       <div className="upd-island">
         <span className="upd-rim" aria-hidden />
-        <img src="/icons/icon-192.png" alt="" width={40} height={40} className="upd-icon" />
+        <img src="/icons/icon-256.webp" alt="" width={40} height={40} className="upd-icon" />
         <span className="upd-text">
           <strong>{t('upd_title')}</strong>
           <span className="upd-ver">{RUNNING.version} → {next.version}</span>

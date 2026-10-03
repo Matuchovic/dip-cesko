@@ -11,8 +11,9 @@ import { TrackFollower } from './follower';
 import { TrackNetwork, type TrackKind } from './tracks';
 import { buildExtrusions, buildPieces, DEFAULT_SHAPES, type VehicleShape } from './vehicle3d';
 import { bearingDeg, D2R, offsetM, pointAlong, polyLength, type LngLat } from './geometry';
-import { ArticulatedLayer, ARTICULATED_ASSETS, roofHeight, type ArticulatedVehicle } from './articulated-layer';
-import { VehicleLayer, type ModelVehicle } from './vehicle-layer';
+import type { ArticulatedLayer, ArticulatedVehicle } from './articulated-layer';
+import type { VehicleLayer, ModelVehicle } from './vehicle-layer';
+import { ARTICULATED_ASSETS, roofHeight } from './articulated-shared';
 import { hasVehicleModel, MODEL_ZOOM as MODEL3D_ZOOM, VEHICLE_DIMENSIONS, type VehicleStyle } from './vehicle-presentation';
 
 export interface MapSettings { vehicleStyle: VehicleStyle; buildings3d: boolean; showStops: boolean; reducedMotion: boolean }
@@ -52,8 +53,11 @@ const HAS_3D = new Set<Mode>(['tram', 'train', 'bus', 'trolleybus', 'ferry']);
 export class MapController {
   readonly map: MlMap;
   private follower: TrackFollower;
-  private modelLayer = new VehicleLayer();
-  private artLayer = new ArticulatedLayer(manifest.assets);
+  /** 3D vozidla (three.js ~ 600 kB) se načtou až po prvním vykreslení mapy – start aplikace je tak rychlý. */
+  private modelLayer: VehicleLayer | null = null;
+  private artLayer: ArticulatedLayer | null = null;
+  private loading3d: Promise<void> | null = null;
+  private pending3d: { models: ModelVehicle[]; arts: ArticulatedVehicle[] } = { models: [], arts: [] };
   private vehicles = new Map<string, VehicleState>();
   private modes = new Set<Mode>(MODES);
   private selectedId: string | null = null;
@@ -124,10 +128,8 @@ export class MapController {
     await this.addVehicleImages();
     this.addLayers();
     try { this.map.setProjection({ type: 'mercator' }); } catch { /* styl bez projekce */ }
-    if (!this.map.getLayer(this.modelLayer.id)) this.map.addLayer(this.modelLayer, 'dop-badge');
-    if (!this.map.getLayer(this.artLayer.id)) this.map.addLayer(this.artLayer, 'dop-badge');
-    this.modelLayer.setEnabled(this.settings.vehicleStyle === 'models');
-    this.artLayer.setEnabled(this.settings.vehicleStyle === 'models');
+    if (this.modelLayer && this.artLayer) this.attach3d();
+    else if (this.settings.vehicleStyle === 'models') this.map.once('idle', () => void this.ensure3d());
     this.styleBuildings();
     this.addSubwayLines();
     this.applyBuildings();
@@ -357,7 +359,10 @@ export class MapController {
     return classifyPositionAge(Number.isFinite(t) ? (now - t) / 1000 : null);
   }
 
-  private kick() { if (!this.raf && !this.destroyed) this.raf = requestAnimationFrame(this.frame); }
+  /** Když mapu zakrývá úvodní průvodce, animace vozidel stojí – průvodce běží plynule a šetří se baterie. */
+  private paused = false;
+  setPaused(p: boolean) { this.paused = p; if (p && this.raf) { cancelAnimationFrame(this.raf); this.raf = 0; } if (!p) { this.lastPush = 0; this.kick(); } }
+  private kick() { if (!this.raf && !this.destroyed && !this.paused) this.raf = requestAnimationFrame(this.frame); }
 
   private frame = () => {
     this.raf = 0;
@@ -455,15 +460,19 @@ export class MapController {
       if (sprite && asset && !this.pitchedMode && zoom >= SPRITE_ZOOM) pieces.push(...buildPieces(s.body, shape, asset.id, { fresh: stale ? 'stale' : 'live', sort: sel ? 1000 : 10 }));
       if (want3d && hasBody && HAS_3D.has(v.route.mode)) solids.push(...buildExtrusions(s.body, shape));
     } catch (e) { if (!this.warnedFrame) { this.warnedFrame = true; console.warn('Vozidlo nelze vykreslit', id, e); } } });
-    // štítky a body: nejvýš 10× za sekundu (3D modely se posouvají v každém snímku) – méně práce pro mapu
-    if (now - this.lastLiveData >= 100 || this.liveDirty) {
+    // štítky a body: nejvýš 10× za sekundu (3D modely se posouvají v každém snímku) – méně práce pro mapu.
+    // Během tažení a přibližování jen ~2× za sekundu: mapa má celý výkon pro plynulý pohyb.
+    const moving = this.map.isMoving();
+    const liveEvery = moving ? 450 : live.length > 400 ? 200 : 100;
+    if (now - this.lastLiveData >= liveEvery || (this.liveDirty && !moving)) {
       (this.map.getSource(LIVE) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: live });
       (this.map.getSource(TRAIL) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: trails });
       this.lastLiveData = now; this.liveDirty = false;
     }
     if (pulses.length || this.pulsesShown) { (this.map.getSource(PULSE) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: pulses }); this.pulsesShown = pulses.length > 0; }
-    this.modelLayer.setVehicles(style === 'models' ? models : []);
-    this.artLayer.setVehicles(style === 'models' ? arts : []);
+    this.pending3d = { models: style === 'models' ? models : [], arts: style === 'models' ? arts : [] };
+    this.modelLayer?.setVehicles(this.pending3d.models);
+    this.artLayer?.setVehicles(this.pending3d.arts);
     if (!this.pitchedMode || zoom < SPRITE_ZOOM) (this.map.getSource(PIECES) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: pieces });
     if (want3d) { (this.map.getSource(V3D) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: solids }); this.last3d = now; }
   }
@@ -598,14 +607,14 @@ export class MapController {
 
   private hover(x: number, y: number) {
     if (this.coarse) return;
-    const onModel = this.settings.vehicleStyle === 'models' && (this.artLayer.pick(x, y, 10) ?? this.modelLayer.pick(x, y, 10)) !== null;
+    const onModel = this.settings.vehicleStyle === 'models' && (this.artLayer?.pick(x, y, 10) ?? this.modelLayer?.pick(x, y, 10) ?? null) !== null;
     this.map.getCanvas().style.cursor = onModel || this.pick(x, y) ? 'pointer' : '';
   }
 
   private async handleClick(x: number, y: number) {
     if (this.settings.vehicleStyle === 'models') {
       const r = this.coarse ? 26 : 14;
-      const hit = this.artLayer.pick(x, y, r) ?? this.modelLayer.pick(x, y, r);
+      const hit = this.artLayer?.pick(x, y, r) ?? this.modelLayer?.pick(x, y, r) ?? null;
       if (hit) { this.events.onStop(null); this.select(hit); return; }
     }
     const f = this.pick(x, y);
@@ -655,8 +664,9 @@ export class MapController {
     this.settings = s;
     this.follower.animator.setReducedMotion(s.reducedMotion);
     if (!this.ready) return;
-    this.modelLayer.setEnabled(s.vehicleStyle === 'models');
-    this.artLayer.setEnabled(s.vehicleStyle === 'models');
+    this.modelLayer?.setEnabled(s.vehicleStyle === 'models');
+    this.artLayer?.setEnabled(s.vehicleStyle === 'models');
+    if (s.vehicleStyle === 'models') void this.ensure3d();
     if (prev.vehicleStyle !== s.vehicleStyle) {
       for (const id of [PIECES, V3D]) (this.map.getSource(id) as GeoJSONSource | undefined)?.setData(EMPTY);
       this.applyPitchMode(true);
@@ -716,7 +726,32 @@ export class MapController {
     } catch { /* styl bez vrstvy transportation */ }
   }
 
+  /** Stáhne 3D knihovnu a vrstvy (jednou), přidá je do mapy a předá jim čekající vozidla. */
+  private ensure3d(): Promise<void> {
+    if (this.modelLayer && this.artLayer) return Promise.resolve();
+    this.loading3d ??= Promise.all([import('./vehicle-layer'), import('./articulated-layer')]).then(([v, a]) => {
+      if (this.destroyed) return;
+      this.modelLayer = new v.VehicleLayer();
+      this.artLayer = new a.ArticulatedLayer(manifest.assets);
+      if (this.ready) this.attach3d();
+    }).catch(() => { this.loading3d = null; /* zkusí se při dalším přepnutí */ });
+    return this.loading3d;
+  }
+  private attach3d() {
+    if (!this.modelLayer || !this.artLayer) return;
+    try {
+      if (!this.map.getLayer(this.modelLayer.id)) this.map.addLayer(this.modelLayer, this.map.getLayer('dop-badge') ? 'dop-badge' : undefined);
+      if (!this.map.getLayer(this.artLayer.id)) this.map.addLayer(this.artLayer, this.map.getLayer('dop-badge') ? 'dop-badge' : undefined);
+    } catch { return; }
+    this.modelLayer.setEnabled(this.settings.vehicleStyle === 'models');
+    this.artLayer.setEnabled(this.settings.vehicleStyle === 'models');
+    this.modelLayer.setVehicles(this.pending3d.models);
+    this.artLayer.setVehicles(this.pending3d.arts);
+    this.map.triggerRepaint();
+  }
+
   modelDiagnostics() {
+    if (!this.modelLayer || !this.artLayer) return { enabled: false, vehicles: 0, instances: 0, meshes: 0, drawCalls: 0 };
     const m = this.modelLayer.diagnostics(), a = this.artLayer.diagnostics();
     return { ...m, instances: m.instances + a.instances, meshes: m.meshes + a.meshes, drawCalls: m.drawCalls + a.drawCalls };
   }

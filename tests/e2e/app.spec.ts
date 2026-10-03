@@ -58,14 +58,19 @@ test('výběr vozidla klepnutím do mapy (zásah mimo střed)', async ({ page })
   await page.goto('/');
   await ready(page);
   await jump(page, { ...ANDEL, padding: { left: 420, top: 64, right: 0, bottom: 0 } });
-  const pt = await page.evaluate(() => {
-    const m = (window as unknown as W).__doprava!.map!;
-    const f = m.queryRenderedFeatures({ layers: ['dop-pieces', 'dop-marker'] }).map((x) => ({ p: m.project(x.geometry.coordinates), id: String(x.properties.vid ?? x.properties.id) }))
-      .find((x) => x.p.x > 460 && x.p.x < 1320 && x.p.y > 110 && x.p.y < 840);
-    return f ? { x: f.p.x, y: f.p.y } : null;
-  });
-  expect(pt).not.toBeNull();
-  await page.mouse.click(pt!.x + 1, pt!.y + 1); // vozidla se plynule pohybují – klik blízko středu části
+  // vozidla se plynule pohybují: jako člověk – když se netrefím, klepnu znovu na aktuální polohu (nejvýš 3×)
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const pt = await page.evaluate(() => {
+      const m = (window as unknown as W).__doprava!.map!;
+      const f = m.queryRenderedFeatures({ layers: ['dop-pieces', 'dop-marker'] }).map((x) => ({ p: m.project(x.geometry.coordinates), id: String(x.properties.vid ?? x.properties.id) }))
+        .find((x) => x.p.x > 460 && x.p.x < 1320 && x.p.y > 110 && x.p.y < 840);
+      return f ? { x: f.p.x, y: f.p.y } : null;
+    });
+    expect(pt).not.toBeNull();
+    await page.mouse.click(pt!.x + 1, pt!.y + 1);
+    if (await page.locator('#vd-title').isVisible({ timeout: 1500 }).catch(() => false)) break;
+    await page.waitForTimeout(300);
+  }
   await expect(page.locator('#vd-title')).toBeVisible();
 });
 

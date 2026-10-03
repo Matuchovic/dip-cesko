@@ -10,7 +10,7 @@ import { hydrateFavorites } from '@/lib/favorites';
 import { initInstall } from '@/lib/install';
 import { initOnboarding } from '@/lib/onboarding';
 import { playTramBell, unlockAudio } from '@/lib/sound';
-import Onboarding from './Onboarding';
+import { onboardingStore } from '@/lib/onboarding';
 import NewsTicker from './NewsTicker';
 import UpdateBanner from './UpdateBanner';
 import { initTilt } from '@/lib/tilt';
@@ -26,6 +26,9 @@ import VehicleDetail from './VehicleDetail';
 import StopCard from './StopCard';
 
 const MapView = dynamic(() => import('./MapView'), { ssr: false, loading: () => <div className="map-canvas" aria-hidden /> });
+
+// Průvodce se stáhne jen tehdy, když se má ukázat – nezdržuje start aplikace.
+const Onboarding = dynamic(() => import('./Onboarding'), { ssr: false });
 
 const NAV: { href: string; label: MessageKey; Icon: typeof IconMap }[] = [
   { href: '/', label: 'nav_map', Icon: IconMap },
@@ -47,6 +50,7 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
   const selected = useStore(appStore, (s) => s.selected);
   const stop = useStore(appStore, (s) => s.stop);
   const meta = useStore(appStore, (s) => s.feedMeta);
+  const onbOpen = useStore(onboardingStore, (s) => s.open);
   const feedError = useStore(appStore, (s) => s.feedError);
   const offline = useStore(appStore, (s) => s.feedOffline);
   const announce = useStore(appStore, (s) => s.announce);
@@ -143,9 +147,9 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
       <header className="topbar">
         <Link href="/" className="brand" aria-label={t('brandAria')}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="brand-logo light" src="/brand/logo.png" alt={t('appName')} width={174} height={40} />
+          <span className="brand-stack"><span className="brand-imgs"><img className="brand-logo light" src="/brand/logo.webp" alt={t('appName')} width={146} height={40} />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="brand-logo dark" src="/brand/logo-dark.png" alt="" width={174} height={40} />
+          <img className="brand-logo dark" src="/brand/logo-dark.webp" alt="" width={146} height={40} /></span><span className="brand-tag">{t('appTagline')}</span></span>
         </Link>
         <nav className="nav" aria-label={t('navMain')}>
           {NAV.map(({ href, label, Icon }) => <TLink key={href} href={href} aria-current={pathname === href ? 'page' : undefined}><Icon size={18} />{t(label)}</TLink>)}
@@ -161,7 +165,7 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
       </div>
       <div className="status-scrim" aria-hidden />
       <MapChrome mobile={mobile} />
-      <Onboarding />
+      {onbOpen && <Onboarding />}
 
       <div className="m-header">
         <Link href="/odjezdy" className="m-search"><IconSearch size={20} />{t('searchPrompt')}</Link>
