@@ -12,7 +12,9 @@ export default defineConfig({
   workers: 1,
   reporter: [['list']],
   outputDir: 'test-results',
-  use: { baseURL: `http://127.0.0.1:${PORT}`, locale: 'cs-CZ', timezoneId: 'Europe/Prague', trace: 'retain-on-failure' },
+  // ostatní testy začínají s vypnutým úvodním průvodcem (vlastní test ho zapíná prázdným úložištěm)
+  use: { baseURL: `http://127.0.0.1:${PORT}`, locale: 'cs-CZ', timezoneId: 'Europe/Prague', trace: 'retain-on-failure',
+    storageState: { cookies: [], origins: [{ origin: `http://127.0.0.1:${PORT}`, localStorage: [{ name: 'doprava.onboarding.v1', value: 'never' }] }] } },
   webServer: {
     command: 'node scripts/prepare-standalone.mjs && node .next/standalone/server.js',
     url: `http://127.0.0.1:${PORT}/api/status`,

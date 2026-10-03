@@ -8,6 +8,8 @@ import { useStore } from '@/lib/store';
 import { useMediaQuery, useNow } from '@/lib/hooks';
 import { hydrateFavorites } from '@/lib/favorites';
 import { initInstall } from '@/lib/install';
+import { initOnboarding } from '@/lib/onboarding';
+import Onboarding from './Onboarding';
 import { hydrateSettings, prefersReducedMotion, settingsStore } from '@/lib/settings';
 import { IconClock, IconMap, IconRoute, IconSearch, IconSettings, IconStar, IconTicket } from './icons';
 import { FreshnessPill } from './ui';
@@ -52,6 +54,7 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
     hydrateSettings();
     hydrateFavorites();
     initInstall();
+    initOnboarding();
     const apply = () => { document.documentElement.dataset.motion = prefersReducedMotion(settingsStore.get()) ? 'reduce' : 'full'; };
     apply();
     const unsub = settingsStore.subscribe(apply);
@@ -117,6 +120,7 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
         <MapView styleUrl={styleUrl} demo={demo} />
       </div>
       <MapChrome mobile={mobile} />
+      <Onboarding />
 
       <div className="m-header">
         <Link href="/odjezdy" className="m-search"><IconSearch size={20} />{t('searchPrompt')}</Link>

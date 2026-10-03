@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.0 – 2026-10-03
+- Úvodní průvodce při spuštění (čeština a angličtina): výběr jazyka (přepne celou aplikaci), živá mapa, odjezdy s radou, přidání na plochu (Android/počítač: systémová instalace, iPhone: návod), zapnutí upozornění (skutečná žádost o povolení a zkušební upozornění), povolení polohy, nastavení Domů a Do práce; na konci konfety z čísel linek.
+- Zobrazuje se při každém spuštění; „Přeskočit“ ho zavře do příštího spuštění, „Již nezobrazovat“ natrvalo (znovu zapnout v Nastavení → Úvodní průvodce).
+- Skutečné logo aplikace (PNG) s animovaným příletem a odleskem; tlačítka s výrazným najetím myší, stiskem a fokusem.
+
 ## 0.8.0 – 2026-10-03
 - Nová domovská obrazovka s jasnou hierarchií: nejbližší zastávka velkým písmem, tři nejbližší odjezdy (linka, cíl, nástupiště, zpoždění, velký odpočet) a u prvního rada lidskou řečí: „Stihneš to · rezerva 2 min“, „Vyraz hned“, „Nestihneš · další za 7 min“ (podle chůze k zastávce).
 - Tvoje místa: Domů a Do práce (uložené jen v zařízení) s časem odjezdu a příjezdu z plánovače; klepnutí otevře Spojení s předvyplněným cílem; pod nimi oblíbené zastávky.
