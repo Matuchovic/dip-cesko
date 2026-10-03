@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.18.0 – 2026-10-03
+- Pruh PROVOZ ↔ NOVINKY: každých 10 s se plynule přepne (nová vrstva se rozprostře přes starou, text se rozmaže a zaostří), dokola, na mobilu i na počítači. PROVOZ ukazuje mimořádnosti PID, nebo „bez hlášených omezení“; NOVINKY tipy (nově i Rodičovská kontrola). Když držíš prst na pruhu nebo čteš detail, nepřepíná se.
+- Mobil: sloupec ovládání mapy (kompas, 3D, poloha, vrstvy, seznam) je vždy mezi filtry a horní hranou panelu – už nezajede pod panel ani nahoru pod vyhledávání. Když je místa málo, schovají se nejdřív méně důležitá tlačítka (seznam a kompas – ten zůstane, když je mapa otočená –, pak 3D, pak vrstvy; poloha zůstává nejdéle). Seznam vozidel je navíc vždy v menu vrstev („Zobrazit seznam vozidel“).
+- Responzivita ověřená automatickým auditem na 24 zařízeních (iPhone SE 1/3, 13 mini, 15, 16 Pro, 16 Pro Max, Galaxy S8, Android 360 px, Pixel 8, Galaxy Fold, telefony na šířku, iPad mini/iPad/Pro 11/Pro 13, iPad na šířku, Galaxy Tab, notebooky 1280/1366/1536, MacBook Air, Full HD, QHD) × 11 obrazovek, 10 kroků průvodce a vyskakovací karty. Opraveno:
+  - Počítač: seznam vozidel byl vlevo mimo obrazovku (obecné pravidlo karet ho stáhlo do toku stránky); detail novinky se ořezával o zaoblený pruh.
+  - Mobil: seznam vozidel byl o 12 px širší než displej; menu vrstev mohlo vyjet nahoru mimo displej a zakrýt své tlačítko – je uprostřed, posouvá se, má křížek a zavře se klepnutím mimo nebo Esc.
+  - Malé telefony: výchozí výška panelu podle displeje (mapa zůstane vidět), na nízkých displejích nižší spodní lišty; ovládání mapy se skryje, když panel dosáhne filtrů; pod stránkami přes celou obrazovku ovládání mapy není dosažitelné.
+  - Telefon na šířku a nízká okna na počítači: sloupec ovládání se vejde nad pruh novinek a tlačítko Rodina (dřív vyjel dolů mimo obrazovku).
+- První spuštění: nejdřív průvodce, potom aplikace. O průvodci se rozhodne ještě před prvním vykreslením, aplikaci zakryje pozadí průvodce a průvodce se začne stahovat hned; kryt zmizí, až je průvodce vykreslený – aplikace pod ním neproblikne.
+
+## 0.17.1 – 2026-10-03
+- Mobil: sloupec tlačítek mapy (kompas, 3D, poloha, vrstvy, seznam) je vždy celý vidět mezi filtry nahoře a panelem dole – už nezajíždí pod panel ani pod vyhledávání. Když je místa málo (rozbalený panel, malý telefon), schovají se nejdřív méně důležitá tlačítka (seznam, kompas – ten zůstane, když je mapa otočená), pak vrstvy a 3D; poloha zůstává nejdéle.
+- Průvodce při spuštění: nejdřív průvodce, potom aplikace. O průvodci se rozhodne ještě před prvním vykreslením stránky, aplikaci do té doby zakrývá klidné pozadí průvodce a průvodce se začne stahovat okamžitě; kryt zmizí, až je průvodce vykreslený. Žádné probliknutí aplikace.
+
 ## 0.17.0 – 2026-10-03
 - Vlastní 3D ikony místo všech emoji: 49 barevných vektorových ikon (doprava, stav jízdy, upozornění, rodina, památky) s leskem, stínem a jemnou animací; malé ikony v textu jsou statické, karty v seznamech se rozhýbou pod prstem/kurzorem, při omezení pohybu stojí.
   - Nahrazeno všude: průvodce (všech 10 kroků), Památky (druhy i doprava u zastávek), Domů/Práce, pruh novinek (výluky i tipy) a jeho detail, rodičovská kontrola (role, souhlas, časová osa, SOS, předvolby, posuvník, tlačítko pod novinkami), QR skener.

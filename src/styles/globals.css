@@ -1020,3 +1020,99 @@ body:has(.ticker) { --ticker-h: 36px; }
 .ticker-detail strong { display: flex; align-items: center; gap: 8px; }
 .a-tag .e3, .a-chip .e3, .a-eb .e3, .a-leg .e3, .a-type .e3, .a-pin .e3, .a-leave .e3, .a-sstop .e3 { vertical-align: -0.25em; }
 .onb-act .e3, .fam-ok .e3, .fam-scan-cta .e3 { vertical-align: -0.3em; }
+
+/* ═══════════ Mobil: ovládání mapy vždy mezi filtry a panelem ═══════════ */
+@media (max-width: 899px) {
+  .controls { top: var(--ctrl-top, 128px) !important; bottom: var(--ctrl-bottom, 300px) !important; width: 48px; justify-content: flex-end; container: ctrls / size; } /* bez CSS přechodu: posun se přepočítává každý snímek spolu s panelem, takže nezaostává */
+  .controls > .ctrl-group { flex: none; }
+  /* málo místa (rozbalený panel): nejdřív pryč seznam a kompas (kompas zůstane, když je mapa otočená) */
+  @container ctrls (max-height: 250px) { .ctrl-list, .ctrl-compass:not(.rotated) { display: none !important; } }
+  @container ctrls (max-height: 160px) { .ctrl-3d { display: none !important; } }
+  @container ctrls (max-height: 112px) { .ctrl-tools { display: none !important; } }
+  @container ctrls (max-height: 54px) { .ctrl-group { display: none !important; } }
+}
+/* ═══════════ Nejdřív průvodce, potom aplikace: kryt ještě před prvním vykreslením ═══════════ */
+html[data-onb] body::after { content: ''; position: fixed; inset: 0; z-index: 2147483000;
+  background: radial-gradient(70% 45% at 15% 10%, rgba(158,193,255,.35), transparent 70%), radial-gradient(60% 40% at 90% 30%, rgba(255,175,200,.25), transparent 70%), #F3F7FD;
+  animation: onb-cover-safety .3s 10s forwards; }
+html[data-onb="out"] body::after { animation: onb-cover-out .3s ease forwards; }
+@keyframes onb-cover-out { to { opacity: 0; visibility: hidden; } }
+@keyframes onb-cover-safety { to { opacity: 0; visibility: hidden; } }
+
+/* ═══════════ Pruh PROVOZ / NOVINKY: dvě vrstvy, každých 10 s plynulé přepnutí s rozmazáním ═══════════ */
+.ticker { background: transparent !important; border-top: 0 !important; }
+.ticker-layer { position: absolute; left: 0; right: 0; top: 0; height: var(--ticker-h, 36px); z-index: 1; visibility: hidden; overflow: hidden; transition: visibility 0s linear 1s; }
+.ticker-layer.on { z-index: 2; visibility: visible; transition: none; }
+.ticker-layer::before { content: ''; position: absolute; inset: 0; background: #0F2341; }
+.ticker-layer.news::before { background: linear-gradient(90deg, #EEF4FF, #F4F7FC 55%, #EEF9F3); box-shadow: inset 0 1px 0 rgba(15,35,65,.08); }
+/* nová vrstva se rozprostře přes starou (stará pod ní zůstane neprůhledná, takže nic neprosvítá) */
+.ticker-layer.on::before { animation: tk-bg-in .9s cubic-bezier(.4,0,.2,1) both; }
+.ticker-content { position: relative; display: flex; align-items: center; height: 100%; padding-right: 40px; color: #fff; will-change: opacity, filter, transform; }
+.ticker-layer.news .ticker-content { color: #0F2341; }
+.ticker-layer:not(.on) .ticker-content { animation: tk-out .55s cubic-bezier(.4,0,.2,1) both; }
+.ticker-layer.on .ticker-content { animation: tk-in .85s .18s cubic-bezier(.22,.9,.3,1) both; }
+@keyframes tk-bg-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tk-out { from { opacity: 1; filter: blur(0); transform: none; } to { opacity: 0; filter: blur(8px); transform: scale(.985); } }
+@keyframes tk-in { from { opacity: 0; filter: blur(10px); transform: scale(1.015); } to { opacity: 1; filter: blur(0); transform: none; } }
+.ticker-layer .ticker-label { height: 100%; }
+.ticker-layer.live .ticker-label { background: #0F2341; box-shadow: 12px 0 14px -6px #0F2341; }
+.ticker-layer.news .ticker-label { background: #EEF4FF; box-shadow: 12px 0 14px -6px #EEF4FF; }
+.ticker-layer.news .ticker-dot, .ticker-layer.calm-live .ticker-dot { background: #22A06B; }
+.ticker-layer:not(.on) .ticker-track { animation-play-state: paused; }
+.ticker-x { position: absolute !important; right: 0; top: 0; z-index: 3; height: var(--ticker-h, 36px) !important; background: transparent !important; color: #fff; transition: color .9s cubic-bezier(.4,0,.2,1); }
+.ticker.phase-news .ticker-x { color: #0F2341; }
+@media (prefers-reduced-motion: reduce) { .ticker-layer.on::before, .ticker-layer .ticker-content { animation-duration: .01s !important; animation-delay: 0s !important; } }
+
+.layers-list-btn { width: 100%; justify-content: center; gap: 8px; margin-top: var(--s2); display: inline-flex; align-items: center; }
+
+/* ═══════════ Responzivita: malé a nízké telefony, stránky přes celou obrazovku, počítač ═══════════ */
+@media (max-width: 899px) {
+  /* stránka (Spojení, Odjezdy…) překrývá celou mapu – ovládání mapy pod ní nemá být dosažitelné ani vidět */
+  body:has(.panel.page-host) .map-top, body:has(.panel.page-host) .controls { visibility: hidden; }
+}
+@media (max-width: 899px) and (max-height: 760px) {
+  /* nízký displej (SE, malé Androidy, telefon na šířku): kompaktnější spodní pruhy, ať zbude místo na mapu */
+  :root { --tabbar-h: 56px; }
+  body:has(.ticker) { --ticker-h: 32px; }
+  body:has(.fam-bar) { --fam-h: 42px; }
+  .fam-bar { padding-top: 4px !important; }
+  .fam-bar-txt small { display: none; }
+  .fam-bar-ico, .fam-bar-ico .e3 { width: 32px !important; height: 32px !important; }
+  .tabbar a { font-size: 10.5px; min-height: 44px; }
+}
+@media (min-width: 900px) {
+  /* detail novinky vyskakuje nad pruh – pruh ho nesmí oříznout; zaoblení drží samotné vrstvy */
+  .ticker { overflow: visible !important; }
+  .ticker-layer { border-radius: 18px; }
+}
+
+/* ═══════════ Počítač i tablet/telefon na šířku: sloupec ovládání se vejde nad pruh novinek a tlačítko Rodina ═══════════ */
+@media (min-width: 900px) {
+  .controls { top: calc(var(--ctrl-top, 70px) + var(--s4)) !important; bottom: var(--ctrl-bottom, 140px) !important; width: 50px; container: ctrls / size; }
+  .controls > .ctrl-group { flex: none; }
+  @container ctrls (max-height: 366px) { .ctrl-list, .ctrl-compass:not(.rotated) { display: none !important; } }
+  @container ctrls (max-height: 270px) { .ctrl-zoom { display: none !important; } }
+  @container ctrls (max-height: 160px) { .ctrl-3d { display: none !important; } }
+  @container ctrls (max-height: 112px) { .ctrl-tools { display: none !important; } }
+  @container ctrls (max-height: 54px) { .ctrl-group { display: none !important; } }
+}
+/* menu vrstev se vždy vejde na výšku displeje (při nízkém okně se posouvá) */
+#layers-menu { max-height: calc(100dvh - var(--ctrl-top, 70px) - 32px); overflow-y: auto; }
+
+/* ═══════════ Vyskakovací karty na mobilu: vždy celé na obrazovce ═══════════ */
+@media (max-width: 899px) {
+  /* seznam vozidel: vůči oknu, ne vůči širší ploše mapy */
+  .vlist { position: fixed !important; left: var(--s3) !important; right: var(--s3) !important; width: auto !important; max-width: calc(100vw - 2 * var(--s3)); box-sizing: border-box; }
+  /* menu vrstev: uprostřed obrazovky (u nízkého sloupce by vyjelo nahoru mimo displej), při malé výšce se posouvá */
+  #layers-menu { position: fixed !important; left: 50% !important; right: auto !important; top: 50% !important; bottom: auto !important; transform: translate(-50%, -50%);
+    width: min(320px, calc(100vw - 2 * var(--s3))) !important; max-height: calc(100dvh - 2 * var(--s4)); overflow-y: auto; z-index: 60; box-sizing: border-box; }
+}
+
+#layers-menu { padding-top: 40px; }
+.layers-x { position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 15px; border: 0; background: var(--surface-2, #F1F4F9); color: var(--ink-2); font-size: 18px; line-height: 1; cursor: pointer; }
+
+/* Seznam vozidel je plovoucí karta: obecné pravidlo .card (position: relative kvůli 3D lesku) ho nesmí stáhnout do toku stránky – na počítači byl vlevo mimo obrazovku */
+@media (min-width: 900px) { .vlist.card { position: absolute !important; } }
+
+/* mobil: menu vrstev je mimo sloupec ovládání (ten je kontejner s vlastním vrstvením) – nad panelem, uprostřed obrazovky */
+.layers-portal #layers-menu { z-index: 90 !important; }

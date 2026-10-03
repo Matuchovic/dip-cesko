@@ -30,7 +30,7 @@ test('žádná emoji: všechny sekce, pruh novinek s detailem, celý průvodce a
   }
   // pruh novinek a jeho detail
   await page.goto('/');
-  const item = page.locator('.ticker-item').first();
+  const item = page.locator('.ticker-layer.on .ticker-item').first();
   await item.waitFor({ timeout: 30_000 });
   await item.dispatchEvent('click'); // pruh se pořád posouvá – klik bez čekání na „klid“
   await page.locator('.ticker-detail').waitFor();

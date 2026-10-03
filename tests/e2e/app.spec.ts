@@ -40,7 +40,15 @@ for (const s of SIZES) {
     await ready(page);
     await jump(page, s.mobile ? { ...ANDEL, zoom: 17.1, padding: { top: 110, bottom: 210, left: 0, right: 0 } } : { ...ANDEL, padding: { left: 420, top: 64, right: 0, bottom: 0 } });
     await page.screenshot({ path: `${SHOTS}/mapa-${s.name}.png` });
-    await page.getByRole('button', { name: 'Seznam vozidel ve výřezu' }).click();
+    const listBtn = page.getByRole('button', { name: 'Seznam vozidel ve výřezu' });
+    if (await listBtn.isVisible()) await listBtn.click();
+    else {
+      // malý displej: tlačítko seznamu se nevešlo → menu vrstev, a když není ani to, schovat panel
+      const layers = page.getByRole('button', { name: 'Vrstvy mapy' });
+      if (!(await layers.isVisible())) await page.getByRole('button', { name: 'Schovat panel' }).click();
+      await layers.click();
+      await page.getByRole('button', { name: 'Zobrazit seznam vozidel' }).click();
+    }
     const rows = page.locator('.vlist .row');
     await expect(rows.first()).toBeVisible();
     await rows.first().click();

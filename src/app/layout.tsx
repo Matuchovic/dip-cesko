@@ -29,7 +29,7 @@ export const viewport: Viewport = {
   themeColor: [{ media: '(prefers-color-scheme: light)', color: '#EEEAE2' }, { media: '(prefers-color-scheme: dark)', color: '#0B1424' }],
 };
 
-const themeInit = `try{var s=JSON.parse(localStorage.getItem('doprava.settings.v1')||'{}');var t=s.theme||'light';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';}catch(e){}`;
+const themeInit = `try{var s=JSON.parse(localStorage.getItem('doprava.settings.v1')||'{}');var t=s.theme||'light';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';}catch(e){}try{if(localStorage.getItem('doprava.onboarding.v1')!=='never'&&sessionStorage.getItem('doprava.onboarding.session')!=='done')document.documentElement.dataset.onb='1';}catch(e){}`;
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const locale = await resolveLocale();

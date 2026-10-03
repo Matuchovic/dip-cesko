@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { appStore, mapApi } from '@/lib/app-state';
 import { useStore } from '@/lib/store';
 import { useMediaQuery, useNow } from '@/lib/hooks';
@@ -31,6 +31,8 @@ const MapView = dynamic(() => import('./MapView'), { ssr: false, loading: () => 
 
 // Průvodce se stáhne jen tehdy, když se má ukázat – nezdržuje start aplikace.
 const Onboarding = dynamic(() => import('./Onboarding'), { ssr: false });
+// Při prvním spuštění začni stahovat průvodce okamžitě – aplikace pod ním mezitím zůstává skrytá.
+if (typeof document !== 'undefined' && document.documentElement.dataset.onb) void import('./Onboarding');
 
 const NAV: { href: string; label: MessageKey; Icon: typeof IconMap }[] = [
   { href: '/', label: 'nav_map', Icon: IconMap },
@@ -41,6 +43,8 @@ const NAV: { href: string; label: MessageKey; Icon: typeof IconMap }[] = [
 ];
 
 const PEEK = 392; // náhled ukáže nejbližší zastávku a tři odjezdy
+/** Výchozí výška panelu podle displeje: na malém telefonu menší, aby zůstala vidět mapa (SE 1 ≈ 230 px, iPhone 15 ≈ 380 px). */
+const peekFor = (vh: number) => Math.max(210, Math.min(PEEK, Math.round((vh - 150) * 0.55)));
 const COLLAPSED = 92; // schovaný panel: jen úchyt a název zastávky – mapa přes celou obrazovku
 
 export default function AppShell({ children, styleUrl, demo }: { children: ReactNode; styleUrl: string; demo: boolean }) {
@@ -58,6 +62,11 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
   const announce = useStore(appStore, (s) => s.announce);
   const now = useNow(5000);
   const [sheetH, setSheetH] = useState(PEEK);
+  // před prvním vykreslením přizpůsobit výchozí výšku panelu displeji (server nezná výšku okna, proto až tady)
+  useLayoutEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- jednorázové sladění s výškou displeje ještě před vykreslením
+    setSheetH((h) => (h === PEEK ? peekFor(window.innerHeight) : h));
+  }, []);
   const drag = useRef<{ y: number; h: number } | null>(null);
   const sheetRef = useRef<HTMLElement>(null);
 
@@ -66,6 +75,10 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
     hydrateFavorites();
     initInstall();
     initOnboarding();
+    // kryt z prvního vykreslení: když se průvodce neotevře nebo se zavře, hned zmizí
+    const dropCover = () => { if (!onboardingStore.get().open) delete document.documentElement.dataset.onb; };
+    dropCover();
+    const unsubCover = onboardingStore.subscribe(dropCover);
     const stopTilt = initTilt();
     // zvuk smí hrát až po interakci: odemknout prvním dotykem
     const unlock = () => { unlockAudio(); window.removeEventListener('pointerdown', unlock); };
@@ -103,7 +116,7 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
     apply();
     const unsub = settingsStore.subscribe(apply);
     if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') navigator.serviceWorker.register('/sw.js').catch(() => undefined);
-    return () => { unsub(); stopTilt(); };
+    return () => { unsub(); unsubCover(); stopTilt(); };
   }, []);
 
   // Při výběru vozidla nebo zastávky se panel na mobilu vysune (úprava stavu při renderu, bez efektu).
@@ -122,10 +135,10 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
     drag.current = null;
     sheetRef.current?.setAttribute('data-dragging', 'false');
     const vh = window.innerHeight;
-    const snaps = [COLLAPSED, PEEK, Math.round(vh * 0.52), vh - 150];
+    const snaps = [COLLAPSED, peekFor(vh), Math.round(vh * 0.52), vh - 150];
     // klepnutí: schovaný → náhled → půl → zpět náhled
     // klepnutí na úchyt: schovaný → vysunout, jinak schovat (šipka ukazuje směr)
-    if (moved < 6) { setSheetH((h) => (h <= COLLAPSED + 10 ? PEEK : COLLAPSED)); return; }
+    if (moved < 6) { setSheetH((h) => (h <= COLLAPSED + 10 ? peekFor(vh) : COLLAPSED)); return; }
     setSheetH((h) => snaps.reduce((a, b) => (Math.abs(b - h) < Math.abs(a - h) ? b : a)));
   };
 

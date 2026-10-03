@@ -15,13 +15,13 @@ test('běžící pruh novinek: jede pod menu u spodního okraje, klepnutím deta
   expect(fb.y + fb.height).toBeGreaterThanOrEqual(844 - 1);
   expect(sh.y + sh.height).toBeLessThanOrEqual(tb.y + 1);
   // text se posouvá
-  const x0 = await page.locator('.ticker-track').evaluate((el) => getComputedStyle(el).transform);
+  const x0 = await page.locator('.ticker-layer.on .ticker-track').evaluate((el) => getComputedStyle(el).transform);
   await page.waitForTimeout(1200);
-  const x1 = await page.locator('.ticker-track').evaluate((el) => getComputedStyle(el).transform);
+  const x1 = await page.locator('.ticker-layer.on .ticker-track').evaluate((el) => getComputedStyle(el).transform);
   expect(x1).not.toBe(x0);
   // najetí / dotyk pruh zastaví (jinak se text stále posouvá) – pak klepnout na novinku
-  await page.locator('.ticker-viewport').hover();
-  await page.locator('.ticker-item').first().click({ force: true });
+  await page.locator('.ticker-layer.on .ticker-viewport').hover();
+  await page.locator('.ticker-layer.on .ticker-item').first().click({ force: true });
   await expect(page.locator('.ticker-detail')).toBeVisible();
   await page.locator('.ticker-detail-x').click();
   await expect(page.locator('.ticker-detail')).toHaveCount(0);
@@ -29,4 +29,29 @@ test('běžící pruh novinek: jede pod menu u spodního okraje, klepnutím deta
   await expect(ticker).toHaveCount(0);
   // popisky spodní lišty jsou vidět celé (žádné posunutí pod okraj)
   await expect(page.locator('nav.tabbar').getByText('Odjezdy')).toBeInViewport();
+});
+
+test('pruh se každých 10 s plynule přepíná PROVOZ ↔ NOVINKY (s rozmazáním) a při čtení detailu stojí', async ({ page }) => {
+  await page.addInitScript(() => { (window as unknown as { __tickerMs: number }).__tickerMs = 1500; }); // zkrácená fáze pro test
+  await page.goto('/');
+  const ticker = page.locator('.ticker');
+  await expect(ticker).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('.ticker-layer.live.on')).toHaveCount(1);
+  await expect(page.locator('.ticker-layer.live.on .ticker-label')).toHaveText('PROVOZ');
+  await expect(page.locator('.ticker-layer.news.on')).toHaveCount(1, { timeout: 4000 });
+  await expect(page.locator('.ticker-layer.news.on .ticker-label')).toHaveText('NOVINKY');
+  // během přechodu je nová vrstva rozmazaná a průhledná, výška pruhu se nemění
+  const h = (await ticker.boundingBox())!.height;
+  await expect(page.locator('.ticker-layer.live.on')).toHaveCount(1, { timeout: 4000 });
+  const mid = await page.locator('.ticker-layer.live.on .ticker-content').evaluate((el) => ({ f: getComputedStyle(el).filter, o: Number(getComputedStyle(el).opacity) }));
+  expect(mid.f === 'none' || /blur/.test(mid.f)).toBe(true);
+  expect((await ticker.boundingBox())!.height).toBe(h);
+  // otevřený detail přepínání zastaví
+  await page.locator('.ticker-layer.on .ticker-item').first().click({ force: true });
+  await expect(page.locator('.ticker-detail')).toBeVisible();
+  const before = await page.locator('.ticker-layer.on').getAttribute('class');
+  await page.waitForTimeout(3500);
+  expect(await page.locator('.ticker-layer.on').getAttribute('class')).toBe(before);
+  await page.locator('.ticker-detail-x').click();
+  await expect(page.locator('.ticker-layer.on')).not.toHaveAttribute('class', before!, { timeout: 4000 });
 });

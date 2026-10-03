@@ -52,6 +52,14 @@ function Flow() {
   };
 
   useEffect(() => { root.current?.focus(); }, []);
+  // průvodce je vykreslený → kryt z prvního vykreslení plynule zmizí (pod ním je už průvodce, ne aplikace)
+  useEffect(() => {
+    const html = document.documentElement;
+    if (!html.dataset.onb) return;
+    const a = setTimeout(() => { html.dataset.onb = 'out'; }, 380);
+    const b = setTimeout(() => { if (html.dataset.onb === 'out') delete html.dataset.onb; }, 720);
+    return () => { clearTimeout(a); clearTimeout(b); }; // při znovupřipojení se časovače nastaví znovu
+  }, []);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
