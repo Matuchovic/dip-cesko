@@ -567,3 +567,49 @@ body:has(.ticker) { --ticker-h: 36px; }
 }
 @media (min-width: 900px) { .ticker { left: calc(var(--panel-w) + var(--s4) * 2); right: var(--s4); bottom: var(--s4); border-radius: 18px; overflow: hidden; box-shadow: var(--shadow-md); } .ticker-detail { bottom: 48px; } }
 @media (prefers-reduced-motion: reduce) { .ticker-track { animation: none; } .ticker-viewport { overflow-x: auto; } .ticker-dot::after { animation: none; } }
+
+/* ---------- spodní část: menu, pod ním pruh novinek až k okraji (žádné prázdné místo) ---------- */
+@media (max-width: 899px) {
+  :root { --safe-pad: env(safe-area-inset-bottom, 0px); }
+  :root[data-vp-short] { --safe-pad: 0px; }
+  .tabbar { height: calc(var(--tabbar-h) + var(--safe-pad)); padding-bottom: var(--safe-pad); }
+  body:has(.ticker) .tabbar { bottom: calc(var(--ticker-h) + var(--safe-pad)); height: var(--tabbar-h); padding-bottom: 0; border-bottom: 0; }
+  .ticker { bottom: 0; height: calc(var(--ticker-h) + var(--safe-pad)); padding-bottom: var(--safe-pad); box-sizing: border-box; align-items: stretch; }
+  .ticker > * { height: var(--ticker-h); align-self: flex-start; }
+  .ticker-detail { bottom: calc(var(--ticker-h) + var(--tabbar-h) + var(--safe-pad) + 8px); height: auto; }
+  .panel.sheet-host { bottom: calc(var(--tabbar-h) + var(--ticker-h) + var(--safe-pad)); }
+  .panel.page-host { bottom: calc(var(--tabbar-h) + var(--ticker-h) + var(--safe-pad)); }
+}
+
+/* ---------- Památky ---------- */
+.lm h1 { margin-bottom: 4px; }
+.lm-sub { margin: 0 0 var(--s4); color: var(--ink-2); font-size: 15px; line-height: 21px; }
+.lm-search { margin-bottom: var(--s3); }
+.lm-tabs { display: flex; gap: 8px; margin-bottom: var(--s2); flex-wrap: wrap; }
+.lm-tabs .chip { border: 1px solid var(--line-strong); background: var(--surface-solid); border-radius: 999px; padding: 8px 14px; font: inherit; font-weight: 700; font-size: 14px; color: var(--ink-2); cursor: pointer; transition: all 180ms ease; }
+.lm-tabs .chip:hover { border-color: var(--primary-600); color: var(--primary-700); transform: translateY(-1px); }
+.lm-tabs .chip.on { background: var(--primary-700, #1C3A63); border-color: transparent; color: #fff; }
+.lm-count { margin: var(--s2) 0; font-size: 13px; color: var(--ink-3); font-weight: 600; }
+.lm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.lm-card { background: var(--surface-solid); border-radius: 20px; padding: 14px; box-shadow: 0 0 0 1px var(--line), 0 6px 18px rgba(15,35,65,.06); }
+.lm-head { display: flex; gap: 12px; align-items: center; width: 100%; border: 0; background: none; padding: 0; text-align: left; cursor: pointer; font: inherit; color: inherit; }
+.lm-ico { width: 44px; height: 44px; flex: none; border-radius: 14px; display: grid; place-items: center; font-size: 22px; background: var(--primary-50, #EAF2FF); }
+.lm-names { display: flex; flex-direction: column; min-width: 0; }
+.lm-name { font-size: 17px; font-weight: 800; line-height: 22px; letter-spacing: -.01em; }
+.lm-meta { font-size: 13px; color: var(--ink-3); font-weight: 600; margin-top: 2px; }
+.lm-stops { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.lm-stops li { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 4px 8px; align-items: center; }
+.lm-mode { font-size: 16px; text-align: center; font-weight: 900; color: #fff; }
+.lm-stops li .lm-mode { color: inherit; }
+.lm-stop { font-size: 14.5px; font-weight: 700; min-width: 0; }
+.lm-stop a { color: var(--ink); text-decoration: none; } .lm-stop a:hover { color: var(--primary-700); text-decoration: underline; }
+.lm-walk { color: var(--ink-3); font-weight: 600; }
+.lm-lines { grid-column: 2; display: flex; flex-wrap: wrap; gap: 4px; }
+.lm-line { min-width: 28px; height: 22px; padding: 0 6px; border-radius: 6px; font-size: 12.5px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+.lm-nostop { margin: 10px 0 0; font-size: 13.5px; color: var(--ink-3); }
+.lm-desc { margin: 10px 0 0; font-size: 14.5px; line-height: 21px; color: var(--ink-2); }
+.lm-actions { display: flex; gap: 8px; margin-top: 12px; }
+.lm-actions .btn { flex: 1; min-height: 42px; }
+.lm-more { width: 100%; margin-top: var(--s4); }
+.lm-foot { margin: var(--s5) 0 0; font-size: 12.5px; color: var(--ink-3); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

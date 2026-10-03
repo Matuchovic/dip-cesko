@@ -13,7 +13,7 @@ import { playTramBell, unlockAudio } from '@/lib/sound';
 import Onboarding from './Onboarding';
 import NewsTicker from './NewsTicker';
 import { hydrateSettings, prefersReducedMotion, settingsStore } from '@/lib/settings';
-import { IconClock, IconMap, IconRoute, IconSearch, IconSettings, IconStar, IconTicket } from './icons';
+import { IconClock, IconLandmark, IconMap, IconRoute, IconSearch, IconSettings, IconStar } from './icons';
 import { FreshnessPill } from './ui';
 import { useT } from '@/i18n';
 import TLink from './TLink';
@@ -30,7 +30,7 @@ const NAV: { href: string; label: MessageKey; Icon: typeof IconMap }[] = [
   { href: '/spojeni', label: 'nav_plan', Icon: IconRoute },
   { href: '/odjezdy', label: 'nav_departures', Icon: IconClock },
   { href: '/oblibene', label: 'nav_favorites', Icon: IconStar },
-  { href: '/jizdenky', label: 'nav_tickets', Icon: IconTicket },
+  { href: '/pamatky', label: 'nav_landmarks', Icon: IconLandmark },
 ];
 
 const PEEK = 392; // náhled ukáže nejbližší zastávku a tři odjezdy
@@ -69,16 +69,25 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
     const iosApp = /iphone|ipad|ipod/i.test(navigator.userAgent) && (navigator as Navigator & { standalone?: boolean }).standalone === true;
     let maxVH = window.innerHeight;
     const onResize = () => { maxVH = Math.max(maxVH, window.innerHeight); };
+    // Okno kratší než obrazovka (známá chyba iOS u aplikací na ploše): spodní kousek pod oknem nejde vykreslit,
+    // proto tam nepřidávat ještě bezpečný okraj – lišta a pruh novinek sednou až dolů.
+    const markShort = () => {
+      const portrait = window.innerWidth < window.innerHeight;
+      document.documentElement.toggleAttribute('data-vp-short', iosApp && portrait && window.screen.height - window.innerHeight > 20);
+    };
     const heal = () => {
-      if (!iosApp || maxVH - window.innerHeight <= 4) return;
+      const full = window.innerWidth < window.innerHeight ? Math.max(maxVH, window.screen.height) : maxVH;
+      if (!iosApp || full - window.innerHeight <= 4) { markShort(); return; }
       const el = document.querySelector<HTMLElement>('.app');
       if (!el) return;
       el.style.display = 'none';
       void el.offsetHeight; // synchronní přepočet rozvržení
       el.style.display = '';
+      requestAnimationFrame(markShort);
     };
     const onFocusOut = (e: FocusEvent) => { if ((e.target as HTMLElement | null)?.matches?.('input, textarea, select')) setTimeout(heal, 160); };
-    window.addEventListener('resize', onResize);
+    window.addEventListener('resize', () => { onResize(); markShort(); });
+    setTimeout(heal, 400); // i hned po spuštění
     document.addEventListener('focusout', onFocusOut);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') setTimeout(heal, 200); });
     const apply = () => { document.documentElement.dataset.motion = prefersReducedMotion(settingsStore.get()) ? 'reduce' : 'full'; };

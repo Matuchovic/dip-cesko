@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.13.0 – 2026-10-03
+- Nová sekce Památky místo Jízdenek v menu: 66 nejznámějších památek hned (i bez sítě), „V okolí“ seřazené podle vzdálenosti a „Všechny“ – všechny kulturní památky Prahy z Wikidat. U každé nejbližší metro, tramvaj a autobus s linkami a minutami chůze, tlačítka „Na mapě“ a „Cesta sem“ (plánovač s vyplněným cílem), hledání s křížkem. Jízdenky zůstávají dostupné odkazem.
+- Pruh novinek je pod menu až u spodního okraje; menu sedí hned nad ním. Když je okno iPhonu kratší než obrazovka (chyba iOS u aplikací na ploše), nepřidává se navíc bezpečný okraj a místo pod oknem má barvu pruhu – žádné prázdné místo. Oprava výšky okna se zkouší i hned po spuštění.
+
 ## 0.12.0 – 2026-10-03
 - Běžící pruh nad spodní lištou: při mimořádnostech PID tmavý „PROVOZ“, jinak „NOVINKY“ s tipy; jede zprava doleva, prstem se zastaví, klepnutím detail (s křížkem), křížkem se schová do příštího spuštění; na počítači pod mapou.
 - Správná čeština „vyraž hned“ / „Vyraž za … min“ (upozornění, rada u odjezdu, Tvoje místa).

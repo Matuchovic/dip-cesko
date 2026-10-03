@@ -26,3 +26,5 @@ export const IconExternal = (p: P) => <svg {...base(p)}><path d="M14 4h6v6M20 4l
 export const IconFollow = (p: P) => <svg {...base(p)}><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7L12 2Z" /></svg>;
 export const IconInfo = (p: P) => <svg {...base(p)}><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7.5h.01" /></svg>;
 export const IconTram = (p: P) => <svg {...base(p)}><rect x="6" y="5" width="12" height="13" rx="3" /><path d="M9 2h6M12 2v3M6 12h12M9 21l1-3M15 21l-1-3" /></svg>;
+
+export const IconLandmark = (p: P) => <svg {...base(p)}><path d="M4 21h16M5 21V11M19 21V11M9 21v-6h6v6" /><path d="M3 11h18L12 4 3 11Z" /><path d="M12 4V2" /></svg>;

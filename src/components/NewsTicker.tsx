@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getJson, useVisibleInterval } from '@/lib/hooks';
 import type { Alert, Envelope } from '@/domain/model';
 import { useT } from '@/i18n';
@@ -23,6 +23,14 @@ export default function NewsTicker() {
   useVisibleInterval(() => { void getJson<Envelope<Alert[]>>('/api/alerts').then((r) => setAlerts(r.body?.data ?? [])); }, 120_000, []);
 
   const live = (alerts?.length ?? 0) > 0;
+  const ref = useRef<HTMLDivElement>(null);
+  // pod oknem aplikace (spodní okraj iPhonu) ať je stejná barva jako pruh – bez rušivého pruhu jiné barvy
+  useEffect(() => {
+    const root = document.documentElement;
+    const bg = ref.current ? getComputedStyle(ref.current).backgroundColor : '';
+    root.style.backgroundColor = bg;
+    return () => { root.style.backgroundColor = ''; };
+  }, [live, hidden, alerts]);
   const items: Item[] = useMemo(() => live
     ? alerts!.slice(0, 8).map((a) => ({ id: String(a.id), text: `🚧 ${a.title}`, title: a.title, detail: a.summary, link: a.link }))
     : TIPS.map((k) => ({ id: k, text: t(k), title: t(k), detail: t(`${k}_d` as MessageKey), link: null })), [alerts, live, t]);
@@ -31,7 +39,7 @@ export default function NewsTicker() {
   if (hidden || alerts === null) return null;
 
   return (
-    <div className={`ticker${live ? '' : ' calm'}`} role="region" aria-label={t('tick_aria')}>
+    <div ref={ref} className={`ticker${live ? '' : ' calm'}`} role="region" aria-label={t('tick_aria')}>
       <span className="ticker-label"><span className="ticker-dot" aria-hidden />{live ? t('tick_live') : t('tick_news')}</span>
       <div className={`ticker-viewport${hold ? ' hold' : ''}`} onPointerDown={() => setHold(true)} onPointerUp={() => setHold(false)} onPointerLeave={() => setHold(false)}>
         <div className="ticker-track" style={{ animationDuration: `${duration}s` }}>
