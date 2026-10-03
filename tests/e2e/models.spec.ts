@@ -37,6 +37,8 @@ test('3D karoserie: vykreslení a výběr mimo střed ve třech natočeních map
   for (const bearing of [0, 90, 225]) {
     await page.evaluate((b) => (window as unknown as W).__doprava!.map.jumpTo({ center: [14.37835, 50.0604], zoom: 19.3, pitch: 62, bearing: b, padding: { left: 420, right: 100, top: 80, bottom: 0 } }), bearing);
     await expect.poll(() => page.evaluate(() => (window as unknown as W).__doprava!.controller.modelDiagnostics().instances)).toBe(1);
+    // geometrie se postaví o snímek později než instance – počkat na skutečné vykreslení
+    await expect.poll(() => page.evaluate(() => (window as unknown as W).__doprava!.controller.modelDiagnostics().drawCalls)).toBeGreaterThan(0);
     const result = await page.evaluate(() => {
       const d = (window as unknown as W).__doprava!;
       return { stats: d.controller.modelDiagnostics(), sprites: d.map.queryRenderedFeatures({ layers: ['dop-pieces'] }).length, p: d.map.project([14.37835, 50.0604 - 0.000144]) };

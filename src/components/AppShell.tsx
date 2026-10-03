@@ -12,6 +12,8 @@ import { initOnboarding } from '@/lib/onboarding';
 import { playTramBell, unlockAudio } from '@/lib/sound';
 import Onboarding from './Onboarding';
 import NewsTicker from './NewsTicker';
+import UpdateBanner from './UpdateBanner';
+import { initTilt } from '@/lib/tilt';
 import { hydrateSettings, prefersReducedMotion, settingsStore } from '@/lib/settings';
 import { IconClock, IconLandmark, IconMap, IconRoute, IconSearch, IconSettings, IconStar } from './icons';
 import { FreshnessPill } from './ui';
@@ -58,6 +60,7 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
     hydrateFavorites();
     initInstall();
     initOnboarding();
+    const stopTilt = initTilt();
     // zvuk smí hrát až po interakci: odemknout prvním dotykem
     const unlock = () => { unlockAudio(); window.removeEventListener('pointerdown', unlock); };
     window.addEventListener('pointerdown', unlock);
@@ -94,7 +97,7 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
     apply();
     const unsub = settingsStore.subscribe(apply);
     if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') navigator.serviceWorker.register('/sw.js').catch(() => undefined);
-    return unsub;
+    return () => { unsub(); stopTilt(); };
   }, []);
 
   // Při výběru vozidla nebo zastávky se panel na mobilu vysune (úprava stavu při renderu, bez efektu).
@@ -188,6 +191,7 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
       )}
 
       <NewsTicker />
+      <UpdateBanner />
       <nav className="tabbar" aria-label={t('navMain')}>
         {NAV.map(({ href, label, Icon }) => <TLink key={href} href={href} aria-current={pathname === href ? 'page' : undefined}><Icon size={22} />{t(label)}</TLink>)}
       </nav>

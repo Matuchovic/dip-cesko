@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14.0 – 2026-10-03
+- Aktualizace jako na MatuchaDev: aplikace zná otisk svého sestavení (na Vercelu hash commitu) a porovnává ho s /api/version – 3 s po startu, každou minutu, při návratu do aplikace a po obnovení signálu; po nálezu přestane. Dole vyjede skleněný ostrov s obíhajícím světlem „Nová verze X“ a „stará → nová“ (jen čísla verzí), tlačítko Aktualizovat (krátká obrazovka načítání s logem) a křížek. Kdo lištu zavře nebo ji přehlédne, dostane novou verzi sám při přechodu do jiné sekce – nikdy během psaní. Servisní pracovník přijímá pokyn k převzetí.
+- Karty ve 3D podle MatuchaDev: skleněná obruba kolem desky, pětivrstvý stín s modrou září, náklon za kurzorem s posouvajícím se leskem (na dotyku jemné zamáčknutí), tmavý režim, bez animací při omezení pohybu.
+
 ## 0.13.0 – 2026-10-03
 - Nová sekce Památky místo Jízdenek v menu: 66 nejznámějších památek hned (i bez sítě), „V okolí“ seřazené podle vzdálenosti a „Všechny“ – všechny kulturní památky Prahy z Wikidat. U každé nejbližší metro, tramvaj a autobus s linkami a minutami chůze, tlačítka „Na mapě“ a „Cesta sem“ (plánovač s vyplněným cílem), hledání s křížkem. Jízdenky zůstávají dostupné odkazem.
 - Pruh novinek je pod menu až u spodního okraje; menu sedí hned nad ním. Když je okno iPhonu kratší než obrazovka (chyba iOS u aplikací na ploše), nepřidává se navíc bezpečný okraj a místo pod oknem má barvu pruhu – žádné prázdné místo. Oprava výšky okna se zkouší i hned po spuštění.

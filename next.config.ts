@@ -1,4 +1,12 @@
 import type { NextConfig } from 'next';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
+// Verze a otisk sestavení se zapečou do kódu v prohlížeči i na serveru.
+// Otisk je na Vercelu hash commitu – liší se u každého nasazení, takže se nová verze pozná
+// i tehdy, když se číslo verze zapomene zvýšit. Číslo verze je pro člověka.
+const APP_VERSION = (JSON.parse(readFileSync(path.join(process.cwd(), 'package.json'), 'utf8')) as { version: string }).version;
+const BUILD_ID = process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.APP_BUILD_ID ?? 'local';
 
 // Povolené zdroje pro mapový podklad. Výchozí je OpenFreeMap; další lze přidat proměnnou MAP_EXTRA_ORIGINS (čárkami).
 const mapOrigins = ['https://tiles.openfreemap.org', ...(process.env.MAP_EXTRA_ORIGINS ?? '').split(',').map((s) => s.trim()).filter(Boolean)];
@@ -20,6 +28,7 @@ const csp = [
 ].join('; ');
 
 const nextConfig: NextConfig = {
+  env: { NEXT_PUBLIC_APP_VERSION: APP_VERSION, NEXT_PUBLIC_BUILD_ID: BUILD_ID },
   reactStrictMode: true,
   poweredByHeader: false,
   output: 'standalone',

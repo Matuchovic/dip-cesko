@@ -20,7 +20,7 @@ describe('jazyky', () => {
       const t = makeT(l);
       expect(Object.keys(MESSAGES[l]).sort()).toEqual([...keys].sort());
       for (const k of keys) {
-        const out = t(k as keyof typeof MESSAGES.cs, { n: 3, s: 125, h: 'X', p: 'A', q: 'x', t: '12:00', age: '1', m: 5, to: 'Y', mode: 'Z', d: '4', list: 'a', on: 1, all: 2, b: 0, z: '16', r: '1', l: '9', u: '', s2: '' });
+        const out = t(k as keyof typeof MESSAGES.cs, { n: 3, s: 125, h: 'X', p: 'A', q: 'x', t: '12:00', age: '1', m: 5, to: 'Y', mode: 'Z', d: '4', list: 'a', on: 1, all: 2, b: 0, z: '16', r: '1', l: '9', u: '', s2: '', v: '1.0.0' });
         expect(out.length, `${l}.${k}`).toBeGreaterThan(0);
         expect(out, `${l}.${k}`).not.toMatch(/\{[a-z]+\}/);
       }
