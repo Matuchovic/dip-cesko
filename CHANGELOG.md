@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.16.0 – 2026-10-03
+- Rodičovská kontrola (nová stránka /rodina a tlačítko pod novinkami):
+  - Spárování osobně: rodič ukáže QR kód (s logem) a jednorázový 6místný kód (platí 10 min); dítě ho naskenuje fotoaparátem přímo v aplikaci nebo opíše. Dítě si přečte, co rodič uvidí a co ne, a samo potvrdí souhlas. Oba telefony ukážou stejné 4 ověřovací obrázky.
+  - Šifrování jen v telefonech: každé zařízení má vlastní klíč (ECDH P-256, nejde vyexportovat), pro každé spojení se odvodí klíč AES-GCM. Server zprávy jen přeposílá a nepřečte je; QR kód nese otisk klíče rodiče, takže podvržený klíč dítě pozná. Upozornění se dešifrují až v telefonu.
+  - Dítě: přednastavené cíle Do školy / Domů, výběr spoje ze zastávky, potvrzení přejetím „Jedu“, „Jsem v cíli“, SOS jen po podržení (s polohou v tu chvíli, pokud je povolená), vypínač sdílení stále na očích.
+  - Rodič: živý stav dítěte, dojezd do cíle z tabule cílové zastávky, zpoždění, časová osa, červené SOS s mapou, zrušení spojení. Automatická upozornění ze serveru: zpoždění (při změně o 2+ min), dojezd do cílové zastávky, nepotvrzený příchod do 10 min, zrušený spoj.
+  - Server zná jen veřejné údaje o spoji (linka, zastávky, čas), ne jména ani polohu; údaje o jízdě se mažou nejpozději po 4 h. Tajemství jen jako otisky, limity pokusů na kódy, nejvýš 6 dětí na rodiče a 4 rodiče na dítě; spojení může kdykoli zrušit kterákoli strana.
+- Fotoaparát je povolen jen pro tuto aplikaci (skener QR kódu).
+
 ## 0.15.1 – 2026-10-03
 - Průvodce opravdu přes celou obrazovku: obecný rámeček fokusu mu přidával zaoblené rohy s modrým okrajem (dole byly vidět modré rohy).
 

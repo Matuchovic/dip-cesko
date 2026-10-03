@@ -12,6 +12,7 @@ import { initOnboarding } from '@/lib/onboarding';
 import { playTramBell, unlockAudio } from '@/lib/sound';
 import { onboardingStore } from '@/lib/onboarding';
 import NewsTicker from './NewsTicker';
+import FamilyBar from './family/FamilyBar';
 import UpdateBanner from './UpdateBanner';
 import { initTilt } from '@/lib/tilt';
 import { hydrateSettings, prefersReducedMotion, settingsStore } from '@/lib/settings';
@@ -195,6 +196,7 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
       )}
 
       <NewsTicker />
+      <FamilyBar />
       <UpdateBanner />
       <nav className="tabbar" aria-label={t('navMain')}>
         {NAV.map(({ href, label, Icon }) => <TLink key={href} href={href} aria-current={pathname === href ? 'page' : undefined}><Icon size={22} />{t(label)}</TLink>)}

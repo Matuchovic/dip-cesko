@@ -8,9 +8,11 @@ test('běžící pruh novinek: jede pod menu u spodního okraje, klepnutím deta
   await expect(ticker).toBeVisible({ timeout: 30_000 });
   // je nad spodní lištou, ne přes ni, a panel končí nad ním
   const tb = (await page.locator('nav.tabbar').boundingBox())!, tk = (await ticker.boundingBox())!, sh = (await page.locator('main.sheet-host').boundingBox())!;
-  // pruh je pod menu až u spodního okraje, panel končí nad menu
+  // pruh je pod menu, pod ním tlačítko Rodičovské kontroly až u spodního okraje; panel končí nad menu
   expect(tk.y).toBeGreaterThanOrEqual(tb.y + tb.height - 1);
-  expect(tk.y + tk.height).toBeGreaterThanOrEqual(844 - 1);
+  const fb = (await page.locator('a.fam-bar').boundingBox())!;
+  expect(fb.y).toBeGreaterThanOrEqual(tk.y + tk.height - 1);
+  expect(fb.y + fb.height).toBeGreaterThanOrEqual(844 - 1);
   expect(sh.y + sh.height).toBeLessThanOrEqual(tb.y + 1);
   // text se posouvá
   const x0 = await page.locator('.ticker-track').evaluate((el) => getComputedStyle(el).transform);

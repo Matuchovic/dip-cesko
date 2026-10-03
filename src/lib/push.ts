@@ -25,6 +25,11 @@ export function pushSupported(): boolean {
 }
 const toKey = (b64: string) => { const p = '='.repeat((4 - (b64.length % 4)) % 4); const raw = atob((b64 + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(raw, (c) => c.charCodeAt(0)); };
 
+/** Odběr upozornění pro rodičovskou kontrolu: bez dotazu na povolení, když ho uživatel ještě nedal (ask=false). */
+export async function subscriptionForPush(ask: boolean): Promise<PushSubscription | WatchError> {
+  if (!ask && (typeof Notification === 'undefined' || Notification.permission !== 'granted')) return 'denied';
+  return subscription();
+}
 async function subscription(): Promise<PushSubscription | WatchError> {
   if (!pushSupported()) return 'unsupported';
   const perm = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission;

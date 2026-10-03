@@ -2,6 +2,7 @@ import { plain as json } from '@/server/plain';
 import { fireWatch, pushConfig, qstash, redis, sender, verifyQstashSignature } from '@/server/push';
 import { transit } from '@/server/transit';
 import { log } from '@/server/log';
+import { familyEnv, runFamilyCheck } from '@/server/family';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -16,6 +17,13 @@ export async function POST(req: Request) {
   }
   let id = '';
   try { id = String((JSON.parse(raw) as { id?: unknown }).id ?? ''); } catch { /* níže */ }
+  // hlídání jízdy dítěte (rodičovská kontrola)
+  const fam = /^fam:([0-9a-f-]{36})$/.exec(id);
+  if (fam) {
+    const env = familyEnv();
+    const result = env ? await runFamilyCheck(env, fam[1]!, async (stop) => (await transit().departures(stop, 60)).data.departures).catch(() => 'error') : 'off';
+    return json({ ok: true, result });
+  }
   if (!/^[0-9a-f-]{36}$/.test(id)) return json({ ok: true });
   const db = redis(cfg);
   const result = await fireWatch(id, {
