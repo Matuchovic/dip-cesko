@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   title: { default: 'DopravaČR – najdi si spoj, kdykoliv, kdekoliv', template: '%s · DopravaČR' },
   description: 'Odjezdy, spojení a živá mapa veřejné dopravy v reálném čase. První integrace: Pražská integrovaná doprava.',
   applicationName: 'DopravaČR',
-  appleWebApp: { capable: true, title: 'DopravaČR', statusBarStyle: 'default' },
+  appleWebApp: { capable: true, title: 'DopravaČR', statusBarStyle: 'black-translucent' },
   icons: {
     icon: [{ url: '/favicon.ico', sizes: 'any' }, { url: '/icons/favicon-32.png', type: 'image/png', sizes: '32x32' }, { url: '/icons/icon-192.png', type: 'image/png', sizes: '192x192' }],
     apple: '/icons/apple-touch-icon.png',
@@ -25,8 +25,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  width: 'device-width', initialScale: 1, viewportFit: 'cover',
-  themeColor: [{ media: '(prefers-color-scheme: light)', color: '#F1F5FA' }, { media: '(prefers-color-scheme: dark)', color: '#0B1424' }],
+  width: 'device-width', initialScale: 1, viewportFit: 'cover', interactiveWidget: 'resizes-content',
+  themeColor: [{ media: '(prefers-color-scheme: light)', color: '#EEEAE2' }, { media: '(prefers-color-scheme: dark)', color: '#0B1424' }],
 };
 
 const themeInit = `try{var s=JSON.parse(localStorage.getItem('doprava.settings.v1')||'{}');var t=s.theme||'light';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';}catch(e){}`;

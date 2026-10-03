@@ -1,5 +1,5 @@
 /* Doprava – service worker: offline obal aplikace a poslední data s jasně označeným stářím. */
-const VERSION = 'doprava-v9';
+const VERSION = 'doprava-v10';
 const SHELL = `${VERSION}-shell`, STATIC = `${VERSION}-static`, API = `${VERSION}-api`;
 const SHELL_URLS = ['/', '/odjezdy', '/spojeni', '/oblibene', '/jizdenky', '/nastaveni', '/map/offline-style.json', '/icons/icon-192.png', '/brand/logo.png', '/brand/logo-dark.png', '/favicon.ico'];
 const STATIC_PREFIXES = ['/_next/static/', '/vehicles/', '/icons/', '/map/', '/maplibre/'];
@@ -59,3 +59,23 @@ async function navigate(req) {
     return (await caches.match(req)) || (await caches.match('/')) || Response.error();
   }
 }
+
+// ---------- upozornění na blížící se spoj (Web Push) ----------
+self.addEventListener('push', (event) => {
+  let msg = { title: 'DopravaČR', body: '', url: '/', tag: 'dopravacr' };
+  try { if (event.data) msg = { ...msg, ...event.data.json() }; } catch { /* prostý text */ }
+  const url = typeof msg.url === 'string' && msg.url.startsWith('/') ? msg.url : '/';
+  event.waitUntil(self.registration.showNotification(String(msg.title).slice(0, 80), {
+    body: String(msg.body).slice(0, 200), tag: String(msg.tag).slice(0, 64), renotify: true, requireInteraction: false,
+    icon: '/icons/icon-192.png', badge: '/icons/favicon-32.png', data: { url }, vibrate: [120, 60, 120],
+  }));
+});
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin).href;
+  event.waitUntil((async () => {
+    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of all) { if (new URL(c.url).origin === self.location.origin) { await c.focus(); if ('navigate' in c) await c.navigate(url); return; } }
+    await self.clients.openWindow(url);
+  })());
+});

@@ -15,6 +15,7 @@ import TLink from '../TLink';
 import { modeName, useT } from '@/i18n';
 import type { MessageKey } from '@/i18n/messages';
 import StopSearch from '../StopSearch';
+import WatchButton from '../WatchButton';
 import { IconAlert, IconClose, IconExternal, IconMap, IconRoute, IconStar, IconWalk } from '../icons';
 
 interface Nearby { key: string; name: string; modes: Mode[]; distance: number; platforms: number }
@@ -156,6 +157,7 @@ export default function HomePanel() {
                             {late ? <span className="warn">{t('delay_minutes', { n: Math.round(d.delay.kind === 'known' ? d.delay.seconds / 60 : 0) })}</span> : d.delay.kind === 'known' ? t('delayShort_onTime') : null}
                           </span>
                         </span>
+                        <WatchButton stop={top.key} stopName={top.name} d={d} />
                         <span className="dep-cd" aria-label={m <= 0 ? t('now') : t('inMin', { n: m })}>{m <= 0 ? <b className="now">{t('now')}</b> : <><b>{m}</b><small>min</small></>}</span>
                       </li>
                     );

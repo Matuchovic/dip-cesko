@@ -76,3 +76,15 @@ docs             zdroje dat, grafika, provoz, ověření, snímky
 ## Data a licence
 
 Mapa © přispěvatelé OpenStreetMap, OpenMapTiles, OpenFreeMap. Doprava: ROPID / PID (CC BY 4.0), Golemio API (Operátor ICT). Písmo Plus Jakarta Sans (OFL) je hostované lokálně. Podrobnosti: [docs/data-sources.md](docs/data-sources.md), [docs/assets.md](docs/assets.md), [docs/operations.md](docs/operations.md).
+
+
+## Upozornění na blížící se spoj (Web Push)
+
+Funkce je bez nastavení vypnutá (aplikace u zvonku napíše, že upozornění nejsou na serveru zapnutá). Zapnutí:
+
+1. **Upstash (zdarma) přes Vercel:** projekt → *Storage* / *Marketplace* → přidat **Upstash for Redis** a **Upstash QStash**. Do projektu se samy doplní proměnné `KV_REST_API_URL`, `KV_REST_API_TOKEN` (nebo `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`) a `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY` (případně `QSTASH_URL` pro region).
+2. **Klíče VAPID** (jednou, lokálně): `npx web-push generate-vapid-keys` a do Vercelu přidat `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` a `VAPID_SUBJECT` (např. `mailto:tvuj@email.cz`).
+3. Adresa aplikace pro zpětné volání se bere z `VERCEL_PROJECT_PRODUCTION_URL`; jinou lze nastavit proměnnou `APP_URL`.
+4. Nasadit znovu (Redeploy).
+
+Jak to funguje: zvonek → prohlížeč vytvoří push odběr → `POST /api/push/watch` uloží hlídání do Redisu (TTL do odjezdu) a naplánuje zprávu v QStash na čas „odjezd − zvolený předstih“ → QStash zavolá `POST /api/push/fire` (ověřený podpis) → server zkontroluje živé odjezdy: zpožděný spoj přeplánuje, včasný oznámí, zrušený nahlásí → service worker zobrazí upozornění. Na iPhonu fungují upozornění jen v aplikaci přidané na plochu (iOS 16.4+).

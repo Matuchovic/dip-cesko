@@ -32,6 +32,7 @@ const NAV: { href: string; label: MessageKey; Icon: typeof IconMap }[] = [
 ];
 
 const PEEK = 392; // náhled ukáže nejbližší zastávku a tři odjezdy
+const COLLAPSED = 92; // schovaný panel: jen úchyt a název zastávky – mapa přes celou obrazovku
 
 export default function AppShell({ children, styleUrl, demo }: { children: ReactNode; styleUrl: string; demo: boolean }) {
   const pathname = usePathname();
@@ -71,15 +72,16 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
   }
 
   const onPointerDown = (e: React.PointerEvent) => { drag.current = { y: e.clientY, h: sheetH }; (e.target as HTMLElement).setPointerCapture(e.pointerId); sheetRef.current?.setAttribute('data-dragging', 'true'); };
-  const onPointerMove = (e: React.PointerEvent) => { if (drag.current) setSheetH(Math.max(120, Math.min(window.innerHeight - 140, drag.current.h + drag.current.y - e.clientY))); };
+  const onPointerMove = (e: React.PointerEvent) => { if (drag.current) setSheetH(Math.max(COLLAPSED, Math.min(window.innerHeight - 140, drag.current.h + drag.current.y - e.clientY))); };
   const onPointerUp = (e: React.PointerEvent) => {
     if (!drag.current) return;
     const moved = Math.abs(e.clientY - drag.current.y);
     drag.current = null;
     sheetRef.current?.setAttribute('data-dragging', 'false');
     const vh = window.innerHeight;
-    const snaps = [PEEK, Math.round(vh * 0.52), vh - 150];
-    if (moved < 6) { setSheetH((h) => (h <= PEEK + 10 ? snaps[1]! : PEEK)); return; }
+    const snaps = [COLLAPSED, PEEK, Math.round(vh * 0.52), vh - 150];
+    // klepnutí: schovaný → náhled → půl → zpět náhled
+    if (moved < 6) { setSheetH((h) => (h <= COLLAPSED + 10 ? PEEK : h <= PEEK + 10 ? snaps[2]! : PEEK)); return; }
     setSheetH((h) => snaps.reduce((a, b) => (Math.abs(b - h) < Math.abs(a - h) ? b : a)));
   };
 
@@ -119,6 +121,7 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
       <div className="map-layer" role="region" aria-label={t('mapRegion')}>
         <MapView styleUrl={styleUrl} demo={demo} />
       </div>
+      <div className="status-scrim" aria-hidden />
       <MapChrome mobile={mobile} />
       <Onboarding />
 
@@ -127,11 +130,17 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
         <Link href="/nastaveni" className="icon-btn" aria-label={t('nav_settings')} style={{ width: 48, height: 48, boxShadow: 'var(--shadow-md)' }}><IconSettings size={20} /></Link>
       </div>
 
-      <main id="main" ref={sheetRef} className={`panel ${sheetMode ? 'sheet-host' : 'page-host'}`} aria-label={isMapRoute ? t('panelMap') : t('panelContent')} tabIndex={-1}
+      <main id="main" ref={sheetRef} data-collapsed={sheetMode && sheetH <= COLLAPSED + 10 ? 'true' : undefined} className={`panel ${sheetMode ? 'sheet-host' : 'page-host'}`} aria-label={isMapRoute ? t('panelMap') : t('panelContent')} tabIndex={-1}
         onFocus={(e) => { if (sheetMode && (e.target as HTMLElement).tagName === 'INPUT') setSheetH(Math.round(window.innerHeight - 150)); }}>
         {sheetMode && (
           <button type="button" className="sheet-handle" aria-label={sheetH > PEEK + 10 ? t('sheetCollapse') : t('sheetExpand')} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
             <span />
+          </button>
+        )}
+        {sheetMode && (
+          <button type="button" className={`sheet-toggle${sheetH <= COLLAPSED + 10 ? ' up' : ''}`} aria-expanded={sheetH > COLLAPSED + 10}
+            aria-label={sheetH <= COLLAPSED + 10 ? t('sheetExpand') : t('sheetHide')} onClick={() => setSheetH((h) => (h <= COLLAPSED + 10 ? PEEK : COLLAPSED))}>
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
         )}
         <div className="panel-scroll">{panelContent}</div>

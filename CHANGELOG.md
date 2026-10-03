@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.10.0 – 2026-10-03
+- Upozornění na blížící se spoj (Web Push): zvonek u odjezdu → 2, 5 nebo 10 min předem; funguje i se zavřenou aplikací. Server hlídání uloží (Upstash Redis), QStash ho probudí přesně v pravou chvíli, server znovu ověří živý odjezd – zpožděný spoj přeplánuje, zrušený nahlásí. Klepnutí na upozornění otevře odjezdy zastávky.
+- Bezpečnost upozornění: odesílání jen na push služby prohlížečů (žádné SSRF), podpis QStash (HS256, aktuální i příští klíč, kontrola těla a platnosti), tajný token pro zrušení (uložen jen jako hash), nejvýš 10 hlídání na zařízení, limity požadavků, data se samy mažou po odjezdu.
+- Aplikace přes celou obrazovku: na iPhonu mapa i pod stavovým řádkem (s jemným ztmavením pro čitelnost), na Androidu stavový řádek v barvě mapy; klávesnice zmenšuje obsah místo překrytí.
+- Psaní bez přiblížení stránky: pole mají na dotykových zařízeních písmo aspoň 16 px.
+- Panel jde schovat dolů: tažením dolů nebo tlačítkem se šipkou; schovaný ukazuje jen název zastávky, klepnutím se vrátí.
+
 ## 0.9.0 – 2026-10-03
 - Úvodní průvodce při spuštění (čeština a angličtina): výběr jazyka (přepne celou aplikaci), živá mapa, odjezdy s radou, přidání na plochu (Android/počítač: systémová instalace, iPhone: návod), zapnutí upozornění (skutečná žádost o povolení a zkušební upozornění), povolení polohy, nastavení Domů a Do práce; na konci konfety z čísel linek.
 - Zobrazuje se při každém spuštění; „Přeskočit“ ho zavře do příštího spuštění, „Již nezobrazovat“ natrvalo (znovu zapnout v Nastavení → Úvodní průvodce).

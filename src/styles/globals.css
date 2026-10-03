@@ -461,3 +461,50 @@ button.row:hover, a.row:hover { background: var(--surface-hover); }
 .ob-confetti span { position: absolute; width: 34px; height: 22px; border-radius: 7px; font-weight: 800; font-size: 11px; display: flex; align-items: center; justify-content: center; animation: ob-conf 1.4s cubic-bezier(.2,.8,.3,1) forwards; }
 @keyframes ob-conf { to { transform: translate(var(--dx), var(--dy)) rotate(var(--r)); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .ob-backdrop *, .ob-backdrop { animation: none !important; transition: none !important; } .st { opacity: 1; transform: none; } }
+
+/* ---------- přes celou obrazovku (i pod stavovým řádkem) ---------- */
+html, body { overscroll-behavior: none; }
+.status-scrim { display: none; }
+@media (display-mode: standalone) and (max-width: 899px) {
+  /* bílé písmo stavového řádku iPhonu zůstane čitelné i nad světlou mapou */
+  .status-scrim { display: block; position: fixed; z-index: 40; top: 0; left: 0; right: 0; height: calc(var(--safe-top) + 10px); pointer-events: none;
+    background: linear-gradient(180deg, rgba(15,35,65,.55) 0%, rgba(15,35,65,.25) 60%, rgba(15,35,65,0) 100%); }
+}
+
+/* ---------- psaní bez přiblížení stránky (iOS zvětšuje pole s písmem pod 16 px) ---------- */
+@media (pointer: coarse) { input, select, textarea, .input { font-size: max(16px, 1rem) !important; } }
+input, select, textarea { touch-action: manipulation; }
+
+/* ---------- panel jde schovat dolů ---------- */
+@media (max-width: 899px) {
+  .panel.sheet-host { transition: height 420ms cubic-bezier(.22, 1.2, .36, 1), box-shadow 300ms ease; }
+  .sheet-toggle { position: absolute; z-index: 3; top: 8px; right: 12px; width: 36px; height: 36px; border-radius: 18px; border: 0; display: grid; place-items: center; cursor: pointer;
+    background: var(--surface-2, #F4F6F9); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line); transition: transform 380ms cubic-bezier(.22, 1.4, .36, 1), background 200ms ease, color 200ms ease; }
+  .sheet-toggle:hover { background: var(--primary-100); color: var(--primary-700); }
+  .sheet-toggle:active { transform: scale(.92); }
+  .sheet-toggle.up { transform: rotate(180deg); }
+  .sheet-toggle.up:active { transform: rotate(180deg) scale(.92); }
+  .panel.sheet-host[data-collapsed="true"] .panel-scroll { overflow: hidden; }
+  .panel.sheet-host[data-collapsed="true"] .dep-list, .panel.sheet-host[data-collapsed="true"] .more-link { opacity: 0; transition: opacity 200ms ease; }
+  .panel.sheet-host[data-collapsed="true"] .hero-title { font-size: 24px !important; line-height: 28px !important; margin-top: 0 !important; transition: font-size 300ms ease; }
+}
+@media (prefers-reduced-motion: reduce) { .panel.sheet-host, .sheet-toggle { transition: none; } }
+
+/* ---------- upozornění na odjezd (zvonek) ---------- */
+.dep-row { grid-template-columns: 46px minmax(0, 1fr) auto auto; }
+.watch { position: relative; display: inline-flex; align-items: center; }
+.watch-btn { width: 38px; height: 38px; border-radius: 19px; border: 0; display: grid; place-items: center; cursor: pointer; color: var(--ink-3); background: transparent;
+  transition: transform 220ms cubic-bezier(.22,1.5,.36,1), background 200ms ease, color 200ms ease, box-shadow 200ms ease; }
+.watch-btn:hover { background: var(--primary-50); color: var(--primary-600); transform: translateY(-1px); box-shadow: 0 6px 14px rgba(15,35,65,.12); }
+.watch-btn:active { transform: scale(.9); }
+.watch-btn.on { color: #fff; background: var(--primary-600); box-shadow: 0 6px 16px rgba(31,111,235,.35); animation: ring 700ms ease; }
+.watch-btn.busy { opacity: .6; }
+@keyframes ring { 0% { transform: rotate(0); } 20% { transform: rotate(-16deg); } 40% { transform: rotate(14deg); } 60% { transform: rotate(-8deg); } 80% { transform: rotate(5deg); } 100% { transform: rotate(0); } }
+.watch-pop { position: absolute; z-index: 30; right: 0; top: 44px; min-width: 190px; display: grid; gap: 4px; padding: 8px; border-radius: 16px; background: var(--surface-solid);
+  box-shadow: 0 16px 36px rgba(15,35,65,.22), 0 0 0 1px var(--line); animation: pop 260ms cubic-bezier(.22,1.4,.36,1); }
+@keyframes pop { from { opacity: 0; transform: translateY(-6px) scale(.96); } }
+.watch-pop-title { font-size: 12px; font-weight: 700; color: var(--ink-2); padding: 4px 8px 2px; }
+.watch-pop button { text-align: left; border: 0; background: transparent; padding: 10px 10px; border-radius: 10px; font: inherit; font-weight: 700; font-size: 15px; color: var(--ink); cursor: pointer; transition: background 160ms ease; }
+.watch-pop button:hover { background: var(--primary-50); color: var(--primary-700); }
+.watch-msg { position: absolute; z-index: 30; right: 0; top: 44px; width: max-content; max-width: 240px; padding: 8px 12px; border-radius: 12px; background: #0F2341; color: #fff; font-size: 13px; line-height: 18px; font-weight: 600; box-shadow: 0 12px 28px rgba(15,35,65,.3); animation: pop 260ms cubic-bezier(.22,1.4,.36,1); }
+@media (prefers-reduced-motion: reduce) { .watch-btn.on, .watch-pop, .watch-msg { animation: none; } }
