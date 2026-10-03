@@ -1,7 +1,7 @@
 /**
  * Šifrování rodičovské kontroly (jen v telefonech, Web Crypto):
  * každé zařízení má vlastní pár klíčů ECDH P-256 (soukromý klíč nejde z prohlížeče vytáhnout),
- * ze sdíleného tajemství se přes HKDF odvodí klíč AES-GCM 256 pro jedno spojení rodič ↔ dítě.
+ * ze sdíleného tajemství se přes HKDF odvodí klíč AES-GCM 256 pro jedno spojení rodič – dítě.
  */
 const enc = new TextEncoder(), dec = new TextDecoder();
 export const b64u = {
@@ -41,10 +41,12 @@ export async function fingerprint(pub: string): Promise<string> {
   return b64u.from(await subtle().digest('SHA-256', b64u.to(pub) as BufferSource)).slice(0, 22);
 }
 
-const EMOJI = ['🚋', '🚇', '🚌', '🚆', '⛴️', '🚠', '🌳', '🌻', '🍎', '🍐', '🍒', '🍋', '🥨', '🧁', '🍪', '🎈', '🎨', '🎸', '🎲', '🧩', '⚽', '🏀', '🎯', '🚀', '⭐', '🌙', '☀️', '🌈', '❄️', '🔥', '💧', '🍀', '🐶', '🐱', '🐭', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🦉', '🐢', '🐬', '🐳', '🦋', '🐞', '🦄', '🐙', '🦀', '🍉', '🍓', '🥕', '🌵', '🏰', '🗽'];
-/** Ověřovací obrázky: stejné na obou telefonech jen tehdy, když spolu mluví opravdu ty dva telefony. */
+/** 32 výrazně odlišných vlastních ikon (žádná emoji); 4 z 32 = přes milion kombinací. */
+export const VERIFY_ICONS = ['tram', 'metro', 'bus', 'trolley', 'train', 'ferry', 'cable', 'pin', 'clock', 'warn', 'finish', 'works', 'route', 'bell', 'sos', 'lock',
+  'eyes', 'map', 'star', 'home', 'school', 'work', 'party', 'broom', 'castle', 'church', 'bridge', 'gallery', 'tower', 'park', 'theatre', 'candle'] as const;
+/** Ověřovací obrázky (názvy ikon): stejné na obou telefonech jen tehdy, když spolu mluví opravdu ty dva telefony. */
 export async function verifyEmojis(pubA: string, pubB: string): Promise<string[]> {
   const [x, y] = [pubA, pubB].sort();
   const h = new Uint8Array(await subtle().digest('SHA-256', enc.encode(`${x}|${y}`)));
-  return [0, 1, 2, 3].map((i) => EMOJI[h[i]! % EMOJI.length]!);
+  return [0, 1, 2, 3].map((i) => VERIFY_ICONS[h[i]! % VERIFY_ICONS.length]!);
 }

@@ -4,9 +4,11 @@ import { getJson, useVisibleInterval } from '@/lib/hooks';
 import type { Alert, Envelope } from '@/domain/model';
 import { useT } from '@/i18n';
 import type { MessageKey } from '@/i18n/messages';
+import E3, { type E3Name } from './icons/E3';
 
-interface Item { id: string; text: string; title: string; detail: string; link: string | null }
+interface Item { id: string; icon: E3Name; text: string; title: string; detail: string; link: string | null }
 const TIPS: MessageKey[] = ['tick_tip1', 'tick_tip2', 'tick_tip3', 'tick_tip4'];
+const TIP_ICONS: E3Name[] = ['bell', 'metro', 'home', 'check'];
 const HIDE_KEY = 'doprava.ticker.hidden';
 
 /**
@@ -32,8 +34,8 @@ export default function NewsTicker() {
     return () => { root.style.backgroundColor = ''; };
   }, [live, hidden, alerts]);
   const items: Item[] = useMemo(() => live
-    ? alerts!.slice(0, 8).map((a) => ({ id: String(a.id), text: `🚧 ${a.title}`, title: a.title, detail: a.summary, link: a.link }))
-    : TIPS.map((k) => ({ id: k, text: t(k), title: t(k), detail: t(`${k}_d` as MessageKey), link: null })), [alerts, live, t]);
+    ? alerts!.slice(0, 8).map((a) => ({ id: String(a.id), icon: 'works' as E3Name, text: a.title, title: a.title, detail: a.summary, link: a.link }))
+    : TIPS.map((k, i) => ({ id: k, icon: TIP_ICONS[i]!, text: t(k), title: t(k), detail: t(`${k}_d` as MessageKey), link: null })), [alerts, live, t]);
   // rychlost podle délky textu (~55 px/s), aby se dalo pohodlně číst
   const duration = Math.max(18, Math.round(items.reduce((n, i) => n + i.text.length, 0) * 0.16));
   if (hidden || alerts === null) return null;
@@ -44,7 +46,7 @@ export default function NewsTicker() {
       <div className={`ticker-viewport${hold ? ' hold' : ''}`} onPointerDown={() => setHold(true)} onPointerUp={() => setHold(false)} onPointerLeave={() => setHold(false)}>
         <div className="ticker-track" style={{ animationDuration: `${duration}s` }}>
           {[0, 1].map((copy) => items.map((it) => (
-            <button key={`${copy}-${it.id}`} type="button" className="ticker-item" tabIndex={copy ? -1 : 0} aria-hidden={copy ? true : undefined} onClick={() => setOpen(it)}>{it.text}</button>
+            <button key={`${copy}-${it.id}`} type="button" className="ticker-item" tabIndex={copy ? -1 : 0} aria-hidden={copy ? true : undefined} onClick={() => setOpen(it)}><E3 name={it.icon} size={17} /> {it.text}</button>
           )))}
         </div>
       </div>
@@ -52,9 +54,9 @@ export default function NewsTicker() {
       {open && (
         <div className="ticker-detail" role="dialog" aria-label={open.title}>
           <button type="button" className="ticker-detail-x" aria-label={t('close')} onClick={() => setOpen(null)}>×</button>
-          <strong>{open.title}</strong>
+          <strong><E3 name={open.icon} size={30} /> {open.title}</strong>
           {open.detail && <p>{open.detail}</p>}
-          {open.link && <a href={open.link} target="_blank" rel="noopener noreferrer">{t('more')} ↗</a>}
+          {open.link && <a href={open.link} target="_blank" rel="noopener noreferrer">{t('more')} <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden><path d="M3 9 9 3M4 3h5v5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></a>}
         </div>
       )}
     </div>

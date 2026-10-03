@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useT } from '@/i18n';
+import E3 from '../icons/E3';
 
 /** Světlý skener QR kódu přímo v aplikaci (fotoaparát zůstává v zařízení, nic se neodesílá). */
 export default function QrScanner({ onCode, onClose, label }: { onCode: (text: string) => void; onClose: () => void; label: string }) {
@@ -33,7 +34,7 @@ export default function QrScanner({ onCode, onClose, label }: { onCode: (text: s
     <div className={`fam-scanner${hit ? ' hit' : ''}`}>
       <video ref={video} playsInline muted aria-label={label} />
       <span className="fam-brk" aria-hidden><i /><i /><i /><i /></span><span className="fam-laser" aria-hidden />
-      {hit && <span className="fam-hit" aria-hidden>✓</span>}
+      {hit && <span className="fam-hit" aria-hidden><E3 name="check" size={72} /></span>}
       <p>{err ?? label}</p>
       <button type="button" className="fam-x" aria-label={t('close')} onClick={onClose}>×</button>
     </div>

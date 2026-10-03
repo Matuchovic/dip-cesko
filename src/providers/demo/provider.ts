@@ -102,7 +102,7 @@ export function demoRotationVehicles(nowMs: number, centerLng = 14.38, centerLat
       isCanceled: false, positionState: 'on_track', lastStopName: null, nextStopName: null });
   }));
   const wrap = ((nowMs / 1000) % 8) < 4 ? 359 : 1;
-  out.push({ ...out[0]!, id: nsId('demo', 'vehicle', 'rot-wrap'), route: { id: null, shortName: '359↔1', mode: 'tram' }, headsign: 'Přechod 359°/0°', lat: centerLat + 0.0012, lon: centerLng, bearing: wrap });
+  out.push({ ...out[0]!, id: nsId('demo', 'vehicle', 'rot-wrap'), route: { id: null, shortName: '359–1', mode: 'tram' }, headsign: 'Přechod 359°/0°', lat: centerLat + 0.0012, lon: centerLng, bearing: wrap });
   return out;
 }
 

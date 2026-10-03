@@ -999,3 +999,24 @@ body:has(.ticker) { --ticker-h: 36px; }
 }
 @media (min-width: 900px) { .fam-bar { left: auto; right: var(--s4); bottom: calc(var(--s4) + 44px); width: 300px; height: 52px; border-radius: 18px; box-shadow: var(--shadow-md); border: 0; } }
 @media (prefers-reduced-motion: reduce) { .fam *, .fam-bar * { animation: none !important; } }
+
+/* ═══════════ Vlastní 3D ikony v kontejnerech (místo emoji) ═══════════ */
+.a-bubble i { background: none !important; box-shadow: none !important; width: 40px !important; height: 40px !important; right: -12px !important; bottom: -12px !important; }
+.a-bubble .e3 { width: 58px; height: 58px; }
+.fam-hit { background: none !important; box-shadow: none !important; width: 80px !important; height: 80px !important; margin: -40px 0 0 -40px !important; }
+.fam-pairav .fam-av { background: none; box-shadow: none; width: auto; height: auto; }
+.fam-bar-ico { background: none !important; box-shadow: none !important; width: 40px !important; height: 40px !important; }
+.fam-lock { width: 40px; height: 40px; }
+.fam-emoji span .e3 { width: 42px; height: 42px; }
+.fam-trust li { display: flex; align-items: center; gap: 10px; }
+.fam-tl li span { display: inline-flex; align-items: center; gap: 6px; }
+.fam-verify { display: inline-flex; gap: 2px; align-items: center; }
+.fam-sos b { display: flex; align-items: center; gap: 8px; }
+.fam-role .e3 { margin-bottom: 2px; }
+.lm-ico { background: none !important; }
+.onb-row-ico { background: none !important; }
+.place-ico.home, .place-ico.work { background: none; box-shadow: none; }
+.ticker-item .e3 { margin-right: 2px; }
+.ticker-detail strong { display: flex; align-items: center; gap: 8px; }
+.a-tag .e3, .a-chip .e3, .a-eb .e3, .a-leg .e3, .a-type .e3, .a-pin .e3, .a-leave .e3, .a-sstop .e3 { vertical-align: -0.25em; }
+.onb-act .e3, .fam-ok .e3, .fam-scan-cta .e3 { vertical-align: -0.3em; }

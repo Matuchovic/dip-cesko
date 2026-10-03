@@ -1,5 +1,5 @@
 /* Doprava – service worker: offline obal aplikace a poslední data s jasně označeným stářím. */
-const VERSION = 'doprava-v16';
+const VERSION = 'doprava-v17';
 const SHELL = `${VERSION}-shell`, STATIC = `${VERSION}-static`, API = `${VERSION}-api`;
 const SHELL_URLS = ['/', '/odjezdy', '/spojeni', '/oblibene', '/jizdenky', '/nastaveni', '/map/offline-style.json', '/icons/icon-192.png', '/brand/logo.png', '/brand/logo-dark.png', '/favicon.ico'];
 const STATIC_PREFIXES = ['/_next/static/', '/vehicles/', '/icons/', '/map/', '/maplibre/'];
@@ -76,21 +76,21 @@ async function famText(f) {
   const link = await famIdb('links', f.linkId);
   const en = link && link.lang === 'en';
   const name = (link && link.peerName) || (en ? 'Your child' : 'Dítě');
-  if (f.type === 'joined') return { t: en ? '👨‍👩‍👧 Child connected' : '👨‍👩‍👧 Dítě se připojilo', b: en ? 'Open the app to finish pairing.' : 'Otevři aplikaci a dokonči spárování.' };
+  if (f.type === 'joined') return { t: en ? 'Child connected' : 'Dítě se připojilo', b: en ? 'Open the app to finish pairing.' : 'Otevři aplikaci a dokonči spárování.' };
   if (f.type === 'unlink') return { t: en ? 'Connection ended' : 'Spojení zrušeno', b: name };
   if (f.type === 'auto') {
-    if (f.kind === 'delay') return { t: `⏱ ${name}: ${en ? 'line' : 'linka'} ${f.line} +${f.min} min`, b: en ? 'The vehicle is running late.' : 'Spoj má zpoždění.' };
-    if (f.kind === 'arrived') return { t: `📍 ${name}: ${en ? 'arrived' : 'v cíli'}`, b: `${en ? 'Line' : 'Linka'} ${f.line} → ${f.stopName || ''}` };
-    if (f.kind === 'noconfirm') return { t: `⚠️ ${name}`, b: en ? 'Arrived 10 min ago but hasn’t confirmed yet.' : 'Spoj dojel před 10 min, ale zatím nepotvrdil(a) příchod.' };
-    if (f.kind === 'canceled') return { t: `❌ ${en ? 'Line' : 'Linka'} ${f.line}`, b: en ? `${name}'s service is cancelled.` : `Spoj (${name}) je zrušený.` };
+    if (f.kind === 'delay') return { t: `${name}: ${en ? 'line' : 'linka'} ${f.line} +${f.min} min`, b: en ? 'The vehicle is running late.' : 'Spoj má zpoždění.' };
+    if (f.kind === 'arrived') return { t: `${name}: ${en ? 'arrived' : 'v cíli'}`, b: `${en ? 'Line' : 'Linka'} ${f.line} → ${f.stopName || ''}` };
+    if (f.kind === 'noconfirm') return { t: `${name}: ${en ? 'not confirmed' : 'nepotvrzeno'}`, b: en ? 'Arrived 10 min ago but hasn’t confirmed yet.' : 'Spoj dojel před 10 min, ale zatím nepotvrdil(a) příchod.' };
+    if (f.kind === 'canceled') return { t: `${en ? 'Line' : 'Linka'} ${f.line} ${en ? 'cancelled' : 'nejede'}`, b: en ? `${name}'s service is cancelled.` : `Spoj (${name}) je zrušený.` };
   }
   let d = null;
   if (link && link.key && f.ct && f.iv) { try { d = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: famB64(f.iv) }, link.key, famB64(f.ct)))); } catch { d = null; } }
-  if (f.kind === 'board') return { t: `🚋 ${name} ${en ? 'is riding' : 'jede'}`, b: d ? `${d.line} → ${d.toName || d.headsign || ''}` : '' };
-  if (f.kind === 'arrive') return { t: `🏁 ${name} ${en ? 'arrived' : 'je v cíli'}`, b: '' };
-  if (f.kind === 'sos') return { t: `🆘 ${name} ${en ? 'needs help' : 'potřebuje pomoc'}`, b: d && d.lat ? (en ? 'Location attached – open the app.' : 'Poloha přiložena – otevři aplikaci.') : (en ? 'Open the app.' : 'Otevři aplikaci.') };
-  if (f.kind === 'pause') return { t: `⏸ ${name}`, b: en ? 'Sharing switched off.' : 'Sdílení vypnuto.' };
-  if (f.kind === 'resume') return { t: `▶️ ${name}`, b: en ? 'Sharing switched on.' : 'Sdílení zapnuto.' };
+  if (f.kind === 'board') return { t: `${name} ${en ? 'is riding' : 'jede'}`, b: d ? `${d.line} → ${d.toName || d.headsign || ''}` : '' };
+  if (f.kind === 'arrive') return { t: `${name} ${en ? 'arrived' : 'je v cíli'}`, b: '' };
+  if (f.kind === 'sos') return { t: `SOS · ${name} ${en ? 'needs help' : 'potřebuje pomoc'}`, b: d && d.lat ? (en ? 'Location attached – open the app.' : 'Poloha přiložena – otevři aplikaci.') : (en ? 'Open the app.' : 'Otevři aplikaci.') };
+  if (f.kind === 'pause') return { t: name, b: en ? 'Sharing switched off.' : 'Sdílení vypnuto.' };
+  if (f.kind === 'resume') return { t: name, b: en ? 'Sharing switched on.' : 'Sdílení zapnuto.' };
   if (f.kind === 'hello') return null;
   return { t: name, b: '' };
 }

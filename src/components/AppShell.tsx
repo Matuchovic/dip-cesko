@@ -25,6 +25,7 @@ import type { MessageKey } from '@/i18n/messages';
 import MapChrome from './MapChrome';
 import VehicleDetail from './VehicleDetail';
 import StopCard from './StopCard';
+import { E3Defs } from './icons/E3';
 
 const MapView = dynamic(() => import('./MapView'), { ssr: false, loading: () => <div className="map-canvas" aria-hidden /> });
 
@@ -144,6 +145,7 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
 
   return (
     <div className="app" style={{ '--sheet-h': `${sheetH}px`, '--sheet-peek': `${sheetMode ? Math.min(sheetH, PEEK) : 0}px` } as React.CSSProperties}>
+      <E3Defs />
       <a className="skip-link" href="#main">{t('skip')}</a>
       <header className="topbar">
         <Link href="/" className="brand" aria-label={t('brandAria')}>

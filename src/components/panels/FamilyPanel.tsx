@@ -11,6 +11,7 @@ import type { Departure, Envelope, StopGroup, DepartureBoard } from '@/domain/mo
 import { MODE_COLOR } from '@/domain/modes';
 import StopSearch from '../StopSearch';
 import { childSend, createInvite, familyStore, hydrateFamily, join, lookup, pollInvite, refreshAll, savePreset, unlink, type InviteView, type LinkView, type Pending, type Trip } from '@/lib/family/family';
+import E3, { type E3Name } from '../icons/E3';
 
 const QrScanner = dynamic(() => import('../family/QrScanner'), { ssr: false });
 type View = 'home' | 'add' | 'join' | 'consent' | 'done';
@@ -66,11 +67,11 @@ function Intro({ onParent, onChild, t }: { onParent: () => void; onChild: () => 
     <div className="fam-intro">
       <p className="fam-lead">{t('fam_lead')}</p>
       <div className="fam-roles">
-        <button type="button" className="fam-role" onClick={onParent}><span className="fam-av mom">👩</span><b>{t('fam_iamParent')}</b><small>{t('fam_iamParentSub')}</small></button>
-        <button type="button" className="fam-role" onClick={onChild}><span className="fam-av kid">👧</span><b>{t('fam_iamChild')}</b><small>{t('fam_iamChildSub')}</small></button>
+        <button type="button" className="fam-role" onClick={onParent}><E3 name="parent" size={64} /><b>{t('fam_iamParent')}</b><small>{t('fam_iamParentSub')}</small></button>
+        <button type="button" className="fam-role" onClick={onChild}><E3 name="child" size={64} /><b>{t('fam_iamChild')}</b><small>{t('fam_iamChildSub')}</small></button>
       </div>
       <ul className="fam-trust">
-        <li>🔐 {t('fam_trust1')}</li><li>🚋 {t('fam_trust2')}</li><li>👀 {t('fam_trust3')}</li><li>🧹 {t('fam_trust4')}</li>
+        <li><E3 name="lock" size={28} /> {t('fam_trust1')}</li><li><E3 name="tram" size={28} /> {t('fam_trust2')}</li><li><E3 name="eyes" size={28} /> {t('fam_trust3')}</li><li><E3 name="broom" size={28} /> {t('fam_trust4')}</li>
       </ul>
     </div>
   );
@@ -109,8 +110,8 @@ function AddChild({ t, lang, onDone, onBack }: { t: ReturnType<typeof useT>; lan
   }, [inv, joined, name, lang, t]);
   if (joined) return (
     <div className="fam-card fam-center">
-      <span className="fam-big">🎉</span><h2>{t('fam_childJoined')}</h2><p>{t('fam_verifyHint')}</p>
-      <div className="fam-emoji" aria-label={t('fam_verify')}>{joined.map((e, i) => <span key={i}>{e}</span>)}</div>
+      <span className="fam-big"><E3 name="party" size={72} /></span><h2>{t('fam_childJoined')}</h2><p>{t('fam_verifyHint')}</p>
+      <div className="fam-emoji" aria-label={t('fam_verify')}>{joined.map((e, i) => <span key={i}><E3 name={e as E3Name} size={42} /></span>)}</div>
       <button type="button" className="btn btn-primary" onClick={onDone}>{t('fam_verifyOk')}</button>
     </div>
   );
@@ -172,13 +173,13 @@ function Consent({ t, lang, pending, onDone, onBack }: { t: ReturnType<typeof us
       <p className="fam-eb">{t('fam_step2')}</p>
       <h2>{t('fam_consentTitle')}</h2>
       <ul className="fam-consent">
-        <li><i>🚋</i><span>{t('fam_c1')}<small>{t('fam_c1s')}</small></span></li>
-        <li><i>🔔</i><span>{t('fam_c2')}<small>{t('fam_c2s')}</small></span></li>
-        <li className="no"><i>📍</i><span>{t('fam_c3')}<small>{t('fam_c3s')}</small></span></li>
-        <li><i>⏸️</i><span>{t('fam_c4')}<small>{t('fam_c4s')}</small></span></li>
+        <li><i><E3 name="tram" size={30} /></i><span>{t('fam_c1')}<small>{t('fam_c1s')}</small></span></li>
+        <li><i><E3 name="bell" size={30} /></i><span>{t('fam_c2')}<small>{t('fam_c2s')}</small></span></li>
+        <li className="no"><i><E3 name="pin" size={30} /></i><span>{t('fam_c3')}<small>{t('fam_c3s')}</small></span></li>
+        <li><i><E3 name="pause" size={30} /></i><span>{t('fam_c4')}<small>{t('fam_c4s')}</small></span></li>
       </ul>
       <p className="fam-sub">{t('fam_verifyHint')}</p>
-      <div className="fam-emoji">{pending.emojis.map((e, i) => <span key={i}>{e}</span>)}</div>
+      <div className="fam-emoji">{pending.emojis.map((e, i) => <span key={i}><E3 name={e as E3Name} size={42} /></span>)}</div>
       <label className="field"><span>{t('fam_yourNameKid')}</span><input className="input" value={name} maxLength={30} onChange={(e) => setName(e.target.value)} placeholder={t('fam_namePh')} /></label>
       {err && <p className="fam-err" role="alert">{err}</p>}
       <button type="button" className="btn btn-primary fam-agree" disabled={busy || !name.trim()} onClick={async () => {
@@ -195,7 +196,7 @@ function Done({ t, role, onOk }: { t: ReturnType<typeof useT>; role: 'parent' | 
   return (
     <div className="fam-card fam-center fam-done">
       <div className="fam-conf" aria-hidden>{Array.from({ length: 30 }, (_, i) => { const a = (i / 30) * Math.PI * 2, v = 90 + ((i * 37) % 120); return <i key={i} style={{ background: C[i % 6], '--x': `${Math.cos(a) * v}px`, '--y': `${Math.sin(a) * v + 50}px`, '--r': `${(i * 83) % 540}deg` } as CSSProperties} />; })}</div>
-      <div className="fam-pairav"><span className="fam-av mom">👩</span><span className="fam-lock">🔒</span><span className="fam-av kid">👧</span></div>
+      <div className="fam-pairav"><span className="fam-av"><E3 name="parent" size={64} /></span><span className="fam-lock"><E3 name="lock" size={30} /></span><span className="fam-av"><E3 name="child" size={64} /></span></div>
       <svg className="fam-chk" viewBox="0 0 90 90" aria-hidden><circle cx="45" cy="45" r="40" /><path d="M28 46l11 11 23-24" /></svg>
       <h2>{role === 'parent' ? t('fam_doneParent') : t('fam_doneChild')}</h2>
       <p>{role === 'parent' ? t('fam_doneParentSub') : t('fam_doneChildSub')}</p>
@@ -229,47 +230,48 @@ function ChildCard({ l, t }: { l: LinkView; t: ReturnType<typeof useT> }) {
   const sos = l.sosActive ? l.msgs.find((m) => m.kind === 'sos') : undefined;
   const sosPos = sos?.data && typeof sos.data.lat === 'number' ? { lat: sos.data.lat as number, lon: sos.data.lon as number } : null;
   const delay = l.auto.find((a) => a.kind === 'delay')?.min ?? null;
-  const status = l.paused ? `⏸ ${t('fam_paused')}` : trip ? (eta !== null ? t('fam_etaMin', { n: eta }) : t('fam_onTheWay')) : l.trip?.confirmed ? `🏁 ${t('fam_arrived', { s: l.trip.toName ?? '' })}` : t('fam_idle');
+  const status = l.paused ? <><E3 name="pause" size={15} /> {t('fam_paused')}</> : trip ? (eta !== null ? t('fam_etaMin', { n: eta }) : t('fam_onTheWay')) : l.trip?.confirmed ? <><E3 name="finish" size={15} /> {t('fam_arrived', { s: l.trip.toName ?? '' })}</> : t('fam_idle');
   const name = l.peerName || t('fam_child');
   return (
     <article className={`fam-child${sos ? ' sos' : ''}`}>
       {sos && (
-        <div className="fam-sos" role="alert"><b>🆘 {t('fam_sosTitle', { n: name })}</b><span>{hhmm(sos.at)}{sosPos ? '' : ` · ${t('fam_sosNoLoc')}`}</span>
-          {sosPos && <button type="button" className="btn" onClick={() => { mapApi.controller?.flyTo(sosPos.lon, sosPos.lat, 17); router.push('/'); }}>🗺️ {t('fam_showMap')}</button>}</div>
+        <div className="fam-sos" role="alert"><b><E3 name="sos" size={30} /> {t('fam_sosTitle', { n: name })}</b><span>{hhmm(sos.at)}{sosPos ? '' : ` · ${t('fam_sosNoLoc')}`}</span>
+          {sosPos && <button type="button" className="btn" onClick={() => { mapApi.controller?.flyTo(sosPos.lon, sosPos.lat, 17); router.push('/'); }}><E3 name="map" size={20} /> {t('fam_showMap')}</button>}</div>
       )}
-      <header><span className="fam-av kid">👧</span><span><b>{name}</b><small>{status}</small></span>{!l.paused && trip && <span className="fam-live"><i />{t('fam_live')}</span>}</header>
+      <header><E3 name="child" size={52} /><span><b>{name}</b><small>{status}</small></span>{!l.paused && trip && <span className="fam-live"><i />{t('fam_live')}</span>}</header>
       {trip && (
         <div className="fam-trip"><span className="fam-line" style={{ background: MODE_COLOR[(trip.mode as keyof typeof MODE_COLOR)] ?? '#C8102E' }}>{trip.line}</span>
-          <span><b>{trip.fromName} → {trip.toName ?? trip.headsign}</b><small>{t('fam_boardedAt', { t: hhmm(trip.boardedAt) })}{delay ? ` · ⏱ ${t('fam_delay', { n: delay })}` : ''}</small></span>
+          <span><b>{trip.fromName} → {trip.toName ?? trip.headsign}</b><small>{t('fam_boardedAt', { t: hhmm(trip.boardedAt) })}{delay ? <> · <E3 name="clock" size={14} /> {t('fam_delay', { n: delay })}</> : ''}</small></span>
           {eta !== null && <span className="fam-eta">{eta}<small>min</small></span>}</div>
       )}
       <ol className="fam-tl">
-        {[...l.msgs.filter((m) => m.kind !== 'hello').map((m) => ({ at: m.at, txt: msgText(t, m.kind, m.data) })), ...l.auto.map((a) => ({ at: a.at, txt: autoText(t, a) }))]
-          .sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 6).map((x, i) => <li key={i}><span>{x.txt}</span><time>{hhmm(x.at)}</time></li>)}
+        {[...l.msgs.filter((m) => m.kind !== 'hello').map((m) => ({ at: m.at, ...msgText(t, m.kind, m.data) })), ...l.auto.map((a) => ({ at: a.at, ...autoText(t, a) }))]
+          .sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 6).map((x, i) => <li key={i}><span><E3 name={x.icon} size={18} /> {x.txt}</span><time>{hhmm(x.at)}</time></li>)}
       </ol>
-      <footer><span className="fam-verify" title={t('fam_verify')}>{l.emojis.join(' ')}</span><button type="button" className="linkish" onClick={() => { if (confirm(t('fam_unlinkQ', { n: name }))) void unlink(l.id); }}>{t('fam_unlink')}</button></footer>
+      <footer><span className="fam-verify" title={t('fam_verify')}>{l.emojis.map((e, i) => <E3 key={i} name={e as E3Name} size={18} />)}</span><button type="button" className="linkish" onClick={() => { if (confirm(t('fam_unlinkQ', { n: name }))) void unlink(l.id); }}>{t('fam_unlink')}</button></footer>
     </article>
   );
 }
-function msgText(t: ReturnType<typeof useT>, kind: string, d: Record<string, unknown> | null) {
+type Line = { icon: E3Name; txt: string };
+function msgText(t: ReturnType<typeof useT>, kind: string, d: Record<string, unknown> | null): Line {
   const line = String(d?.line ?? ''), to = String(d?.toName ?? d?.headsign ?? '');
   switch (kind) {
-    case 'board': return `🚋 ${t('fam_ev_board', { l: line, s: to })}`;
-    case 'arrive': return `🏁 ${t('fam_ev_arrive')}`;
-    case 'sos': return `🆘 ${t('fam_ev_sos')}`;
-    case 'pause': return `⏸ ${t('fam_ev_pause')}`;
-    case 'resume': return `▶️ ${t('fam_ev_resume')}`;
-    case 'end': return `✓ ${t('fam_ev_end')}`;
-    default: return kind;
+    case 'board': return { icon: 'tram', txt: t('fam_ev_board', { l: line, s: to }) };
+    case 'arrive': return { icon: 'finish', txt: t('fam_ev_arrive') };
+    case 'sos': return { icon: 'sos', txt: t('fam_ev_sos') };
+    case 'pause': return { icon: 'pause', txt: t('fam_ev_pause') };
+    case 'resume': return { icon: 'play', txt: t('fam_ev_resume') };
+    case 'end': return { icon: 'check', txt: t('fam_ev_end') };
+    default: return { icon: 'pin', txt: kind };
   }
 }
-function autoText(t: ReturnType<typeof useT>, a: { kind: string; line: string; min?: number; stopName?: string | null }) {
+function autoText(t: ReturnType<typeof useT>, a: { kind: string; line: string; min?: number; stopName?: string | null }): Line {
   switch (a.kind) {
-    case 'delay': return `⏱ ${t('fam_auto_delay', { l: a.line, n: a.min ?? 0 })}`;
-    case 'arrived': return `📍 ${t('fam_auto_arrived', { l: a.line, s: a.stopName ?? '' })}`;
-    case 'noconfirm': return `⚠️ ${t('fam_auto_noconfirm')}`;
-    case 'canceled': return `❌ ${t('fam_auto_canceled', { l: a.line })}`;
-    default: return a.kind;
+    case 'delay': return { icon: 'clock', txt: t('fam_auto_delay', { l: a.line, n: a.min ?? 0 }) };
+    case 'arrived': return { icon: 'pin', txt: t('fam_auto_arrived', { l: a.line, s: a.stopName ?? '' }) };
+    case 'noconfirm': return { icon: 'warn', txt: t('fam_auto_noconfirm') };
+    case 'canceled': return { icon: 'cross', txt: t('fam_auto_canceled', { l: a.line }) };
+    default: return { icon: 'pin', txt: a.kind };
   }
 }
 
@@ -313,7 +315,7 @@ function ChildHome({ link, t }: { link: LinkView; t: ReturnType<typeof useT> }) 
         <div className="fam-card">
           <div className="fam-trip big"><span className="fam-line" style={{ background: MODE_COLOR[(trip.mode as keyof typeof MODE_COLOR)] ?? '#C8102E' }}>{trip.line}</span><span><b>{trip.fromName} → {trip.toName ?? trip.headsign}</b><small>{t('fam_boardedAt', { t: hhmm(trip.boardedAt) })}</small></span></div>
           <div className="fam-row2">
-            <button type="button" className="btn fam-ok" onClick={() => void childSend('arrive', {}).then(() => say(t('fam_sentArrive', { n: parent })))}>🏁 {t('fam_iArrived')}</button>
+            <button type="button" className="btn fam-ok" onClick={() => void childSend('arrive', {}).then(() => say(t('fam_sentArrive', { n: parent })))}><E3 name="finish" size={26} /> {t('fam_iArrived')}</button>
             <HoldSos onFire={() => void sos()} label={t('fam_sos')} />
           </div>
           <p className="hint fam-center-t">{t('fam_sosHint')}</p>
@@ -324,7 +326,7 @@ function ChildHome({ link, t }: { link: LinkView; t: ReturnType<typeof useT> }) 
           <div className="fam-presets">
             {(['school', 'home'] as const).map((id) => { const p = presets.find((x) => x.id === id); return (
               <button key={id} type="button" className={`fam-preset${dest?.key && dest.key === p?.key ? ' on' : ''}`} onClick={() => (p ? setDest({ key: p.key, name: p.name }) : setEditPreset(id))}>
-                <span>{id === 'school' ? '🏫' : '🏠'}</span><b>{id === 'school' ? t('fam_toSchool') : t('fam_toHome')}</b><small>{p ? p.name : t('fam_setStop')}</small>
+                <span><E3 name={id === 'school' ? 'school' : 'home'} size={44} /></span><b>{id === 'school' ? t('fam_toSchool') : t('fam_toHome')}</b><small>{p ? p.name : t('fam_setStop')}</small>
               </button>); })}
           </div>
           {editPreset && <div className="fam-card"><StopSearch label={editPreset === 'school' ? t('fam_toSchool') : t('fam_toHome')} placeholder={t('place_pick')} autoFocus onSelect={(g) => { if (g) { void savePreset({ id: editPreset, key: g.key, name: g.name }); setDest({ key: g.key, name: g.name }); setEditPreset(null); } }} /></div>}
@@ -336,7 +338,7 @@ function ChildHome({ link, t }: { link: LinkView; t: ReturnType<typeof useT> }) 
           {pick && <Slide label={t('fam_slide')} busy={busy} onDone={() => void board()} />}
         </>
       )}
-      <p className="fam-foot"><span className="fam-verify">{link.emojis.join(' ')}</span> · <button type="button" className="linkish" onClick={() => { if (confirm(t('fam_unlinkQ', { n: parent }))) void unlink(link.id); }}>{t('fam_unlink')}</button></p>
+      <p className="fam-foot"><span className="fam-verify">{link.emojis.map((e, i) => <E3 key={i} name={e as E3Name} size={18} />)}</span> · <button type="button" className="linkish" onClick={() => { if (confirm(t('fam_unlinkQ', { n: parent }))) void unlink(link.id); }}>{t('fam_unlink')}</button></p>
     </div>
   );
 }
@@ -352,7 +354,7 @@ function Slide({ label, onDone, busy }: { label: string; onDone: () => void; bus
       <span className="fam-knob" style={{ left: 4 + x }}
         onPointerDown={(e) => { st.current = { x0: e.clientX - x, max: (track.current?.clientWidth ?? 300) - 60 }; (e.target as HTMLElement).setPointerCapture(e.pointerId); }}
         onPointerMove={(e) => { if (st.current) setX(Math.max(0, Math.min(st.current.max, e.clientX - st.current.x0))); }}
-        onPointerUp={() => { const s = st.current; st.current = null; if (s && x > s.max * 0.75) { setX(s.max); onDone(); setTimeout(() => setX(0), 900); } else setX(0); }}>🚋</span>
+        onPointerUp={() => { const s = st.current; st.current = null; if (s && x > s.max * 0.75) { setX(s.max); onDone(); setTimeout(() => setX(0), 900); } else setX(0); }}><E3 name="tram" size={38} /></span>
     </div>
   );
 }

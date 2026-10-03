@@ -17,6 +17,7 @@ import type { MessageKey } from '@/i18n/messages';
 import StopSearch from '../StopSearch';
 import WatchButton from '../WatchButton';
 import { IconAlert, IconClose, IconExternal, IconMap, IconRoute, IconStar, IconWalk } from '../icons';
+import E3 from '../icons/E3';
 
 interface Nearby { key: string; name: string; modes: Mode[]; distance: number; platforms: number }
 const WALK_M_PER_MIN = 75;
@@ -114,7 +115,7 @@ export default function HomePanel() {
     const label = t(kind === 'home' ? 'place_home' : 'place_work');
     if (!p) return (
       <li key={kind}><button type="button" className="place-row" onClick={() => setPicking(kind)}>
-        <span className={`place-ico ${kind}`} aria-hidden>{kind === 'home' ? '⌂' : '◼'}</span>
+        <span className={`place-ico ${kind}`} aria-hidden><E3 name={kind === 'home' ? 'home' : 'work'} size={30} /></span>
         <span className="place-main"><span className="place-title">{label}</span><span className="place-sub">{t('place_set')}</span></span>
         <span className="place-add" aria-hidden>+</span>
       </button></li>
@@ -124,7 +125,7 @@ export default function HomePanel() {
     return (
       <li key={kind} className="place-item">
         <TLink className="place-row" href={`/spojeni?toLat=${p.lat.toFixed(6)}&toLon=${p.lon.toFixed(6)}&toName=${encodeURIComponent(p.name)}`}>
-          <span className={`place-ico ${kind}`} aria-hidden>{kind === 'home' ? '⌂' : '◼'}</span>
+          <span className={`place-ico ${kind}`} aria-hidden><E3 name={kind === 'home' ? 'home' : 'work'} size={30} /></span>
           <span className="place-main"><span className="place-title">{label} · {p.name}</span><span className={`place-sub${leave !== null && leave <= 2 ? ' warn' : ''}`}>{sub}</span></span>
           <span className="chev" aria-hidden>›</span>
         </TLink>

@@ -8,6 +8,7 @@ import { setPlace } from '@/lib/places';
 import { playTramBell, unlockAudio } from '@/lib/sound';
 import { setLanguagePreference, useI18n, useT } from '@/i18n';
 import StopSearch from './StopSearch';
+import E3, { type E3Name } from './icons/E3';
 
 type Perm = 'idle' | 'done' | 'denied' | 'unsupported';
 const STEPS = ['welcome', 'map', 'deps', 'bell', 'plan', 'sights', 'news', 'controls', 'setup', 'places'] as const;
@@ -128,13 +129,13 @@ function Flow() {
               </ul>
             )}
             {step === 'bell' && (
-              <button type="button" className="onb-act" onClick={() => { unlockAudio(); playTramBell(); }}>🔔 {t('onb_bell_play')}</button>
+              <button type="button" className="onb-act" onClick={() => { unlockAudio(); playTramBell(); }}><E3 name="bell" size={22} /> {t('onb_bell_play')}</button>
             )}
             {step === 'setup' && (
               <ul className="onb-setup">
-                <SetupRow icon="📲" title={t('onb_setup_install')} sub={ios ? t('onb_setup_installIos') : t('onb_setup_installSub')} state={inst.installed ? 'done' : install} onClick={() => void doInstall()} t={t} />
-                <SetupRow icon="🔔" title={t('onb_setup_notif')} sub={t('onb_setup_notifSub')} state={notif} onClick={() => void doNotify()} t={t} />
-                <SetupRow icon="📍" title={t('onb_setup_geo')} sub={t('onb_setup_geoSub')} state={geo} onClick={doGeo} t={t} />
+                <SetupRow icon="install" title={t('onb_setup_install')} sub={ios ? t('onb_setup_installIos') : t('onb_setup_installSub')} state={inst.installed ? 'done' : install} onClick={() => void doInstall()} t={t} />
+                <SetupRow icon="bell" title={t('onb_setup_notif')} sub={t('onb_setup_notifSub')} state={notif} onClick={() => void doNotify()} t={t} />
+                <SetupRow icon="pin" title={t('onb_setup_geo')} sub={t('onb_setup_geoSub')} state={geo} onClick={doGeo} t={t} />
               </ul>
             )}
             {step === 'places' && (picking ? (
@@ -142,8 +143,8 @@ function Flow() {
                 onSelect={(g) => { if (g) { setPlace(picking, { name: g.name, key: g.key, lat: g.lat, lon: g.lon }); setSaved((s) => ({ ...s, [picking]: g.name })); setPicking(null); } }} /></div>
             ) : (
               <div className="onb-two">
-                <button type="button" className={`onb-act${saved.home ? ' done' : ''}`} onClick={() => setPicking('home')}>🏠 {saved.home ? `${t('place_home')} · ${saved.home}` : t('place_home')}</button>
-                <button type="button" className={`onb-act${saved.work ? ' done' : ''}`} onClick={() => setPicking('work')}>💼 {saved.work ? `${t('place_work')} · ${saved.work}` : t('place_work')}</button>
+                <button type="button" className={`onb-act${saved.home ? ' done' : ''}`} onClick={() => setPicking('home')}><E3 name="home" size={22} /> {saved.home ? `${t('place_home')} · ${saved.home}` : t('place_home')}</button>
+                <button type="button" className={`onb-act${saved.work ? ' done' : ''}`} onClick={() => setPicking('work')}><E3 name="work" size={22} /> {saved.work ? `${t('place_work')} · ${saved.work}` : t('place_work')}</button>
               </div>
             ))}
           </div>
@@ -163,13 +164,13 @@ function Flow() {
   );
 }
 
-function SetupRow({ icon, title, sub, state, onClick, t }: { icon: string; title: string; sub: string; state: Perm; onClick: () => void; t: ReturnType<typeof useT> }) {
+function SetupRow({ icon, title, sub, state, onClick, t }: { icon: E3Name; title: string; sub: string; state: Perm; onClick: () => void; t: ReturnType<typeof useT> }) {
   const label = state === 'done' ? t('onb_setup_done') : state === 'denied' ? t('ob_denied') : state === 'unsupported' ? t('ob_unsupported') : t('onb_setup_on');
   return (
     <li className={`onb-row ${state}`}>
-      <span className="onb-row-ico" aria-hidden>{icon}</span>
+      <span className="onb-row-ico" aria-hidden><E3 name={icon} size={38} /></span>
       <span className="onb-row-text"><strong>{title}</strong><small>{sub}</small></span>
-      <button type="button" className="onb-row-btn" onClick={onClick} disabled={state === 'done'}>{state === 'done' ? '✓ ' : ''}{label}</button>
+      <button type="button" className="onb-row-btn" onClick={onClick} disabled={state === 'done'}>{state === 'done' ? <><E3 name="check" size={16} /> </> : ''}{label}</button>
     </li>
   );
 }
@@ -223,17 +224,17 @@ function art(step: Step, t: ReturnType<typeof useT>, lang: 'cs' | 'en'): ReactNo
             );
           })}
         </svg>
-        <span className="a-chip c1">⏱ 2 min</span><span className="a-chip c2">⏱ 6 min</span>
+        <span className="a-chip c1"><E3 name="clock" size={15} /> 2 min</span><span className="a-chip c2"><E3 name="clock" size={15} /> 6 min</span>
         <Tap x="42%" y="47%" delay={0.6} label={t('onb_tap')} />
       </div>
     );
     case 'deps': return (
       <div className="a-frame a-deps">
-        <p className="a-eb">🚶 {t('onb_deps_near')}</p><p className="a-stop">Národní třída</p>
-        {[['22', '#C8102E', 'Bílá Hora', 'ok', '✅ ' + t('onb_deps_t1'), 4], ['9', '#C8102E', 'Spojovací', 'go', '🏃 ' + t('onb_deps_t2'), 2], ['B', '#F8B322', 'Zličín', 'no', '⛔ ' + t('onb_deps_t3'), 1]].map(([l, c, d, cls, tag, m], n) => (
+        <p className="a-eb"><E3 name="walk" size={16} /> {t('onb_deps_near')}</p><p className="a-stop">Národní třída</p>
+        {([['22', '#C8102E', 'Bílá Hora', 'ok', 'check', t('onb_deps_t1'), 4], ['9', '#C8102E', 'Spojovací', 'go', 'run', t('onb_deps_t2'), 2], ['B', '#F8B322', 'Zličín', 'no', 'noentry', t('onb_deps_t3'), 1]] as const).map(([l, c, d, cls, tic, tag, m], n) => (
           <div key={String(l) + n} className="a-row" style={{ '--n': n } as CSSProperties}>
             <span className="a-bd" style={{ background: String(c), color: l === 'B' ? '#2B2100' : '#fff' }}>{String(l)}</span>
-            <span className="a-mid"><b>{String(d)}</b><span className={`a-tag ${cls}`}>{String(tag)}</span></span>
+            <span className="a-mid"><b>{String(d)}</b><span className={`a-tag ${cls}`}><E3 name={tic} size={14} /> {String(tag)}</span></span>
             <span className="a-cd">{String(m)}<small>min</small></span>
           </div>
         ))}
@@ -241,32 +242,32 @@ function art(step: Step, t: ReturnType<typeof useT>, lang: 'cs' | 'en'): ReactNo
     );
     case 'bell': return (
       <div className="a-frame a-bell">
-        <div className="a-notif"><img src={ICON} alt="" width={36} height={36} /><span><b>🚋 22 · {t('onb_bell_n1')}</b><br />📍 Národní třída, {t('onb_bell_n2')}<br />✅ {t('onb_bell_n3')}</span></div>
-        <div className="a-row a-bellrow"><span className="a-bd" style={{ background: '#C8102E' }}>22</span><span className="a-mid"><b>Vypich</b><span className="a-tag ok">✅ {t('onb_deps_t1')}</span></span>
-          <span className="a-bellbtn">🔔</span><span className="a-cd">8<small>min</small></span></div>
+        <div className="a-notif"><img src={ICON} alt="" width={36} height={36} /><span><b><E3 name="tram" size={15} /> 22 · {t('onb_bell_n1')}</b><br /><E3 name="pin" size={14} /> Národní třída, {t('onb_bell_n2')}<br /><E3 name="check" size={14} /> {t('onb_bell_n3')}</span></div>
+        <div className="a-row a-bellrow"><span className="a-bd" style={{ background: '#C8102E' }}>22</span><span className="a-mid"><b>Vypich</b><span className="a-tag ok"><E3 name="check" size={14} /> {t('onb_deps_t1')}</span></span>
+          <span className="a-bellbtn"><E3 name="bell" size={26} /></span><span className="a-cd">8<small>min</small></span></div>
         <div className="a-menu"><small>{t('watch_pick')}</small><span>2 min</span><span className="hi">5 min</span><span>10 min</span></div>
         <Tap x="70%" y="62%" delay={0.5} />
       </div>
     );
     case 'plan': return (
       <div className="a-frame a-plan">
-        <div className="a-field"><small>{t('onb_plan_from')}</small><span className="a-type t1">📍 {t('onb_plan_here')}</span></div>
-        <div className="a-field"><small>{t('onb_plan_to')}</small><span className="a-type t2">🏁 {lang === 'en' ? 'Prague Castle' : 'Pražský hrad'}</span></div>
+        <div className="a-field"><small>{t('onb_plan_from')}</small><span className="a-type t1"><E3 name="pin" size={16} /> {t('onb_plan_here')}</span></div>
+        <div className="a-field"><small>{t('onb_plan_to')}</small><span className="a-type t2"><E3 name="finish" size={16} /> {lang === 'en' ? 'Prague Castle' : 'Pražský hrad'}</span></div>
         <div className="a-trip">
-          <div className="a-leg"><i className="walk" />🚶 3 min</div>
+          <div className="a-leg"><i className="walk" /><E3 name="walk" size={15} /> 3 min</div>
           <div className="a-leg"><i style={{ background: '#00A562' }} /><span className="a-bd sm" style={{ background: '#00A562' }}>A</span> Můstek → Malostranská · 3 {t('onb_plan_stops')}</div>
           <div className="a-leg"><i style={{ background: '#C8102E' }} /><span className="a-bd sm" style={{ background: '#C8102E' }}>22</span> → Pražský hrad · 2 {t('onb_plan_stops')}</div>
-          <div className="a-leg"><i className="walk" />🚶 2 min</div>
+          <div className="a-leg"><i className="walk" /><E3 name="walk" size={15} /> 2 min</div>
           <p className="a-total">{t('onb_plan_total')} <b>19 min</b></p>
         </div>
       </div>
     );
     case 'sights': return (
       <div className="a-sights">
-        {[['🏰', lang === 'en' ? 'Prague Castle' : 'Pražský hrad', '🚋', '22', '#C8102E', 2], ['🌉', lang === 'en' ? 'Charles Bridge' : 'Karlův most', 'Ⓜ', 'A', '#00A562', 6], ['⛪', 'Vyšehrad', 'Ⓜ', 'C', '#E2001A', 7]].map(([ic, n, mi, l, c, w], k) => (
+        {([['castle', lang === 'en' ? 'Prague Castle' : 'Pražský hrad', 'tram', '22', '#C8102E', 2], ['bridge', lang === 'en' ? 'Charles Bridge' : 'Karlův most', 'metro', 'A', '#00A562', 6], ['church', 'Vyšehrad', 'metro', 'C', '#E2001A', 7]] as const).map(([ic, n, mi, l, c, w], k) => (
           <div key={String(n)} className={`a-scard s${k}`}>
-            <span className="a-sico">{String(ic)}</span><b>{String(n)}</b>
-            <span className="a-sstop">{String(mi)} <span className="a-bd sm" style={{ background: String(c) }}>{String(l)}</span> · {String(w)} min {t('onb_sights_walk')}</span>
+            <span className="a-sico"><E3 name={ic} size={44} /></span><b>{String(n)}</b>
+            <span className="a-sstop"><E3 name={mi} size={16} /> <span className="a-bd sm" style={{ background: String(c) }}>{String(l)}</span> · {String(w)} min {t('onb_sights_walk')}</span>
             <span className="a-sbtn">{t('lm_route')}</span>
           </div>
         ))}
@@ -276,31 +277,31 @@ function art(step: Step, t: ReturnType<typeof useT>, lang: 'cs' | 'en'): ReactNo
     case 'news': return (
       <div className="a-frame a-news">
         <div className="a-sheet"><b>Národní třída</b><span /><span /></div>
-        <div className="a-detail">🚧 <b>Vinohradská</b><br />{t('onb_news_d')}<i>×</i></div>
-        <div className="a-tabs">{['🗺️', '🧭', '🕐', '⭐', '🏛️'].map((x) => <span key={x}>{x}</span>)}</div>
-        <div className="a-ticker"><b>● {t('tick_live')}</b><span className="a-track">🚧 Vinohradská: {t('onb_news_t1')} &nbsp;•&nbsp; 🚇 Metro C: {t('onb_news_t2')} &nbsp;•&nbsp; 🚧 Vinohradská: {t('onb_news_t1')}</span></div>
+        <div className="a-detail"><E3 name="works" size={22} /> <b>Vinohradská</b><br />{t('onb_news_d')}<i>×</i></div>
+        <div className="a-tabs">{(['map', 'route', 'clock', 'star', 'landmark'] as const).map((x) => <span key={x}><E3 name={x} size={22} /></span>)}</div>
+        <div className="a-ticker"><b>● {t('tick_live')}</b><span className="a-track"><E3 name="works" size={15} /> Vinohradská: {t('onb_news_t1')} &nbsp;•&nbsp; <E3 name="metro" size={15} /> Metro C: {t('onb_news_t2')} &nbsp;•&nbsp; <E3 name="works" size={15} /> Vinohradská: {t('onb_news_t1')}</span></div>
         <Tap x="50%" y="86%" delay={1} />
       </div>
     );
     case 'controls': return (
       <div className="a-frame a-ctrl">
         <div className="a-mapbg" />
-        <div className="a-csheet"><span className="a-grip" /><span className="a-chev">⌄</span><b>Národní třída</b><span className="a-x">×</span><i /><i /></div>
+        <div className="a-csheet"><span className="a-grip" /><span className="a-chev"><svg width="16" height="10" viewBox="0 0 16 10" aria-hidden><path d="M2 2l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg></span><b>Národní třída</b><span className="a-x">×</span><i /><i /></div>
         <Tap x="50%" y="33%" delay={0.4} drag label={t('onb_controls_drag')} />
         <div className="a-upd"><img src={ICON} alt="" width={28} height={28} /><span><b>{t('upd_title')}</b><small>0.14.0 → 0.15.0</small></span><em>{t('upd_btn')}</em></div>
       </div>
     );
     case 'setup': return (
       <div className="a-setup">
-        {['📲', '🔔', '📍'].map((x, n) => <span key={x} className="a-bubble" style={{ '--n': n } as CSSProperties}>{x}<i>✓</i></span>)}
+        {(['install', 'bell', 'pin'] as const).map((x, n) => <span key={x} className="a-bubble" style={{ '--n': n } as CSSProperties}><E3 name={x} size={58} /><i><E3 name="check" size={22} /></i></span>)}
       </div>
     );
     case 'places': return (
       <div className="a-frame a-places">
         <svg viewBox="0 0 320 260" className="a-map-svg"><rect width="320" height="260" fill="#F2EFE8" /><g stroke="#fff" strokeWidth="12" fill="none"><path d="M0 70 L320 100" /><path d="M-10 180 C90 160 210 200 330 170" /><path d="M110 0 L140 260" /></g>
           <path className="a-route dash" d="M70 200 C130 110 180 140 245 70" fill="none" stroke="#1F6FEB" strokeWidth="5" strokeLinecap="round" strokeDasharray="10 9" /></svg>
-        <span className="a-pin p1">🏠 {t('place_home')}</span><span className="a-pin p2">💼 {t('place_work')}</span>
-        <span className="a-leave">🏃 {t('onb_places_leave')}</span>
+        <span className="a-pin p1"><E3 name="home" size={18} /> {t('place_home')}</span><span className="a-pin p2"><E3 name="work" size={18} /> {t('place_work')}</span>
+        <span className="a-leave"><E3 name="run" size={18} /> {t('onb_places_leave')}</span>
       </div>
     );
   }

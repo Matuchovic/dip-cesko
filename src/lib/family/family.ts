@@ -2,7 +2,7 @@
 import { createStore } from '../store';
 import { subscriptionForPush } from '../push';
 import { famDb, type Device, type Preset, type StoredLink } from './db';
-import { fingerprint, linkKey, newKeyPair, open, seal, verifyEmojis } from './crypto';
+import { VERIFY_ICONS, fingerprint, linkKey, newKeyPair, open, seal, verifyEmojis } from './crypto';
 
 /** Rodičovská kontrola v telefonu: spárování, zašifrované zprávy, stav pro rodiče i dítě. */
 export type Role = 'parent' | 'child';
@@ -26,7 +26,12 @@ const pushSub = async () => { const s = await subscriptionForPush(false); return
 export async function hydrateFamily() {
   if (typeof indexedDB === 'undefined') return;
   try {
-    const [links, presets] = await Promise.all([famDb.all<StoredLink>('links'), famDb.all<Preset>('presets')]);
+    const [stored, presets] = await Promise.all([famDb.all<StoredLink>('links'), famDb.all<Preset>('presets')]);
+    const links = await Promise.all(stored.map(async (l) => {
+      if (l.emojis.every((e) => (VERIFY_ICONS as readonly string[]).includes(e))) return l;
+      const d = await device(); const fixed = { ...l, emojis: await verifyEmojis(d.pub, l.peerPub) };
+      await famDb.put('links', fixed); return fixed;
+    }));
     // zachovat už načtený stav (jméno, zprávy) – víc míst v aplikaci volá hydrataci současně
     const prev = new Map(familyStore.get().links.map((v) => [v.id, v]));
     familyStore.set({ ready: true, presets, links: links.map((l) => {

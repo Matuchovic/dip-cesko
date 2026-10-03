@@ -504,7 +504,7 @@ export class MapController {
     this.events.onCamera({ bearing: this.map.getBearing(), pitch: this.map.getPitch(), zoom: this.map.getZoom(), lng: c.lng, lat: c.lat });
   }
 
-  /** Při otáčení a naklápění se přepočítá posun štítků a přepne 2D sprity ↔ 3D vozidla. */
+  /** Při otáčení a naklápění se přepočítá posun štítků a přepne 2D sprity – 3D vozidla. */
   private onViewChange() {
     const b = this.map.getBearing(), p = this.map.getPitch();
     if (Math.abs(b - this.viewAngles.bearing) > 1 || Math.abs(p - this.viewAngles.pitch) > 1) { this.viewAngles = { bearing: b, pitch: p }; this.applyPitchMode(false); this.kick(); }

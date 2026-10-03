@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.0 – 2026-10-03
+- Vlastní 3D ikony místo všech emoji: 49 barevných vektorových ikon (doprava, stav jízdy, upozornění, rodina, památky) s leskem, stínem a jemnou animací; malé ikony v textu jsou statické, karty v seznamech se rozhýbou pod prstem/kurzorem, při omezení pohybu stojí.
+  - Nahrazeno všude: průvodce (všech 10 kroků), Památky (druhy i doprava u zastávek), Domů/Práce, pruh novinek (výluky i tipy) a jeho detail, rodičovská kontrola (role, souhlas, časová osa, SOS, předvolby, posuvník, tlačítko pod novinkami), QR skener.
+  - Ověřovací obrázky při spárování jsou 4 z 32 vlastních ikon (dříve emoji); spojení z 0.16.0 se přepočítají automaticky, takže dál sedí.
+  - Texty upozornění bez emoji (druh dopravy slovem: „Tramvaj 22 · za 5 min · …“) – na zamčené obrazovce by je vykreslil telefon cizím stylem.
+  - Hlídače: unit test prohledá celý kód, texty všech jazyků, servisní pracovníka a manifest; e2e test projde všechny sekce, pruh novinek, celý průvodce a rodičovskou kontrolu z obou stran a hledá emoji ve vykresleném textu i popiscích.
+
 ## 0.16.0 – 2026-10-03
 - Rodičovská kontrola (nová stránka /rodina a tlačítko pod novinkami):
   - Spárování osobně: rodič ukáže QR kód (s logem) a jednorázový 6místný kód (platí 10 min); dítě ho naskenuje fotoaparátem přímo v aplikaci nebo opíše. Dítě si přečte, co rodič uvidí a co ne, a samo potvrdí souhlas. Oba telefony ukážou stejné 4 ověřovací obrázky.

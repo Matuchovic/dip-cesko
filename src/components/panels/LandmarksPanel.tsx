@@ -8,12 +8,13 @@ import { METRO_COLOR } from '@/domain/metro';
 import type { Mode } from '@/domain/model';
 import type { LandmarkKind } from '@/domain/landmarks';
 import TLink from '../TLink';
+import E3, { type E3Name } from '../icons/E3';
 
 interface LStop { name: string; key: string; mode: Mode; walkMin: number; lines: string[] }
 interface Item { id: string; name: string; kind: LandmarkKind; area: string | null; lat: number; lon: number; desc: string | null; top: boolean; distM?: number; stops?: LStop[] }
 type Tab = 'top' | 'near' | 'all';
-const KIND_ICON: Record<LandmarkKind, string> = { castle: '🏰', church: '⛪', bridge: '🌉', square: '🏛️', museum: '🖼️', palace: '🏯', tower: '🗼', park: '🌳', synagogue: '🕍', monument: '🗿', theatre: '🎭', cemetery: '🕯️', other: '📍' };
-const MODE_ICON: Partial<Record<Mode, string>> = { metro: 'Ⓜ', tram: '🚋', bus: '🚌', train: '🚆', trolleybus: '🚎', funicular: '🚠', ferry: '⛴️' };
+const KIND_ICON: Record<LandmarkKind, E3Name> = { castle: 'castle', church: 'church', bridge: 'bridge', square: 'landmark', museum: 'gallery', palace: 'palace', tower: 'tower', park: 'park', synagogue: 'synagogue', monument: 'monument', theatre: 'theatre', cemetery: 'candle', other: 'pin' };
+const MODE_ICON: Partial<Record<Mode, E3Name>> = { metro: 'metro', tram: 'tram', bus: 'bus', train: 'train', trolleybus: 'trolley', funicular: 'cable', ferry: 'ferry' };
 const PAGE = 30;
 
 const badge = (mode: Mode, line: string) => {
@@ -83,7 +84,7 @@ export default function LandmarksPanel() {
         {items.map((it) => (
           <li key={it.id} className={`lm-card${open === it.id ? ' open' : ''}`}>
             <button type="button" className="lm-head" aria-expanded={open === it.id} onClick={() => setOpen(open === it.id ? null : it.id)}>
-              <span className="lm-ico" aria-hidden>{KIND_ICON[it.kind]}</span>
+              <span className="lm-ico" aria-hidden><E3 name={KIND_ICON[it.kind]} size={40} motion="hover" /></span>
               <span className="lm-names"><span className="lm-name">{it.name}</span>
                 <span className="lm-meta">{[t(`lm_kind_${it.kind}` as never), it.area, it.distM !== undefined ? t('lm_dist', { n: it.distM < 1000 ? `${it.distM} m` : `${(it.distM / 1000).toFixed(1)} km` }) : null].filter(Boolean).join(' · ')}</span></span>
             </button>
@@ -91,7 +92,7 @@ export default function LandmarksPanel() {
               <ul className="lm-stops" aria-label={t('lm_howTo')}>
                 {it.stops.map((s) => (
                   <li key={`${s.key}-${s.mode}`}>
-                    <span className="lm-mode" aria-hidden>{MODE_ICON[s.mode] ?? '🚏'}</span>
+                    <span className="lm-mode" aria-hidden><E3 name={MODE_ICON[s.mode] ?? 'stop'} size={20} /></span>
                     <span className="lm-stop"><TLink href={`/odjezdy?zastavka=${encodeURIComponent(s.key)}`}>{s.name}</TLink><span className="lm-walk"> · {t('walkMin', { n: s.walkMin })}</span></span>
                     <span className="lm-lines">{s.lines.slice(0, 6).map((l) => <span key={l} className="lm-line" style={badge(s.mode, l)}>{l}</span>)}</span>
                   </li>

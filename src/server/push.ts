@@ -82,7 +82,9 @@ export function verifyQstashSignature(jwt: string | null, rawBody: string, keys:
 }
 
 // ---------- texty upozornění ----------
-const EMOJI: Record<string, string> = { tram: '🚋', metro: '🚇', bus: '🚌', trolleybus: '🚎', train: '🚆', ferry: '⛴️', funicular: '🚠', other: '🚏' };
+// Bez emoji: text upozornění vykresluje telefon a emoji by byla v cizím (systémovém) stylu. Druh dopravy slovem.
+const MODE_CS: Record<string, string> = { tram: 'Tramvaj', metro: 'Metro', bus: 'Autobus', trolleybus: 'Trolejbus', train: 'Vlak', ferry: 'Přívoz', funicular: 'Lanovka', other: 'Spoj' };
+const MODE_EN: Record<string, string> = { tram: 'Tram', metro: 'Metro', bus: 'Bus', trolleybus: 'Trolleybus', train: 'Train', ferry: 'Ferry', funicular: 'Funicular', other: 'Service' };
 const clock = (ms: number) => new Intl.DateTimeFormat('cs-CZ', { timeZone: 'Europe/Prague', hour: '2-digit', minute: '2-digit' }).format(ms);
 export interface PushMessage { title: string; body: string; url: string; tag: string; actions: { action: string; title: string; url: string }[] }
 
@@ -93,7 +95,7 @@ export interface PushMessage { title: string; body: string; url: string; tag: st
 export function pushMessage(w: Watch, d: Departure | null, now: number, kind: 'arrival' | 'canceled', next: Departure | null = null): PushMessage {
   const en = w.lang === 'en';
   const mode = d?.route.mode ?? w.mode ?? 'bus';
-  const emoji = EMOJI[mode] ?? EMOJI.other!;
+  const modeWord = (en ? MODE_EN : MODE_CS)[mode] ?? (en ? MODE_EN : MODE_CS).other!;
   const dest = w.headsign ?? w.stopName;
   const deps = `/odjezdy?zastavka=${encodeURIComponent(w.stop)}`;
   const line = `/linka?l=${encodeURIComponent(w.line)}&m=${encodeURIComponent(mode)}`;
@@ -102,8 +104,8 @@ export function pushMessage(w: Watch, d: Departure | null, now: number, kind: 'a
     const at = clock(Date.parse(w.scheduledAt));
     const nm = next ? Math.max(0, Math.round((Date.parse(next.predictedAt ?? next.scheduledAt ?? '') - now) / 60_000)) : null;
     return {
-      title: en ? `❌ ${w.line} · ${dest} is cancelled` : `❌ ${w.line} · ${dest} nepojede`,
-      body: (en ? `The ${at} departure is cancelled.` : `Spoj v ${at} je zrušený.`) + (nm !== null ? (en ? `\n➡️ Next ${w.line} in ${nm} min.` : `\n➡️ Další ${w.line} jede za ${nm} min.`) : ''),
+      title: en ? `${modeWord} ${w.line} · ${dest} is cancelled` : `${modeWord} ${w.line} · ${dest} nepojede`,
+      body: (en ? `The ${at} departure is cancelled.` : `Spoj v ${at} je zrušený.`) + (nm !== null ? (en ? `\nNext ${w.line} in ${nm} min.` : `\nDalší ${w.line} jede za ${nm} min.`) : ''),
       url: deps, tag, actions: [{ action: 'deps', title: en ? 'Next departure' : 'Ukázat další spoj', url: deps }],
     };
   }
@@ -112,11 +114,11 @@ export function pushMessage(w: Watch, d: Departure | null, now: number, kind: 'a
   const when = min <= 0 ? (en ? 'now' : 'teď') : (en ? `in ${min} min` : `za ${min} min`);
   const plat = d?.platform ? (en ? `, stop ${d.platform}` : `, nástupiště ${d.platform}`) : '';
   const late = d && d.delay.kind === 'known' && d.delay.seconds >= 60 ? Math.round(d.delay.seconds / 60) : 0;
-  const status = late ? (en ? `⏱️ ${late} min late` : `⏱️ ${late} min zpoždění`) : d?.delay.kind === 'known' ? (en ? '✅ on time' : '✅ jede včas') : (en ? '🕒 per timetable' : '🕒 podle jízdního řádu');
-  const hurry = min <= 3 ? (en ? ' · 🏃 leave now' : ' · 🏃 vyraž hned') : '';
+  const status = late ? (en ? `${late} min late` : `zpoždění ${late} min`) : d?.delay.kind === 'known' ? (en ? 'On time' : 'Jede včas') : (en ? 'Per timetable' : 'Podle jízdního řádu');
+  const hurry = min <= 3 ? (en ? ' · leave now!' : ' · vyraž hned!') : '';
   return {
-    title: `${emoji} ${w.line} · ${when} · ${dest}`,
-    body: `📍 ${w.stopName}${plat}\n${status}${hurry}`,
+    title: `${modeWord} ${w.line} · ${when} · ${dest}`,
+    body: `${w.stopName}${plat}\n${status.charAt(0).toUpperCase()}${status.slice(1)}${hurry}`,
     url: deps, tag,
     actions: [{ action: 'line', title: en ? 'Where is it' : 'Kde je spoj', url: line }, { action: 'deps', title: en ? 'Departures' : 'Odjezdy', url: deps }],
   };

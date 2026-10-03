@@ -52,7 +52,7 @@ describe('upozornění: chytré doručení', () => {
   it('včas: 5 min před odjezdem pošle upozornění a hlídání smaže', async () => {
     const { d, log } = deps(w(), [dep(0)], T0 - 5 * 60_000);
     expect(await fireWatch('id', d)).toBe('sent');
-    expect(log).toEqual(['send:📍 Anděl, nástupiště A\n✅ jede včas', 'remove']);
+    expect(log).toEqual(['send:Anděl, nástupiště A\nJede včas', 'remove']);
   });
   it('zpoždění 4 min: přeplánuje se přesně na nový čas (žádné předčasné upozornění)', async () => {
     const { d, log } = deps(w(), [dep(240)], T0 - 5 * 60_000);
@@ -67,8 +67,8 @@ describe('upozornění: chytré doručení', () => {
   });
   it('anglický text: smajlík druhu dopravy, tučný nadpis s minutami, řádek kde a řádek stavu; tlačítka', () => {
     const m = pushMessage(w({ lang: 'en' }), dep(120), T0 - 3 * 60_000, 'arrival');
-    expect(m.title).toBe('🚋 9 · in 5 min · Spojovací');
-    expect(m.body).toBe('📍 Anděl, stop A\n⏱️ 2 min late');
+    expect(m.title).toBe('Tram 9 · in 5 min · Spojovací');
+    expect(m.body).toBe('Anděl, stop A\n2 min late');
     expect(m.actions.map((x) => x.action)).toEqual(['line', 'deps']);
     expect(m.url).toBe('/odjezdy?zastavka=pid%3AAnd%C4%9Bl');
   });
