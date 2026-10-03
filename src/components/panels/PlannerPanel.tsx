@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { mapApi } from '@/lib/app-state';
 import type { Journey, JourneyLeg } from '@/domain/model';
 import { delayTexts, modeName, useT, type TFn } from '@/i18n';
@@ -43,9 +44,14 @@ function Leg({ leg, t }: { leg: JourneyLeg; t: TFn }) {
 export default function PlannerPanel() {
   const t = useT();
   const [from, setFrom] = useState<Pt | null>(null);
-  const [to, setTo] = useState<Pt | null>(null);
+  const sp = useSearchParams();
+  const pre = (() => {
+    const lat = Number(sp.get('toLat')), lon = Number(sp.get('toLon')), name = (sp.get('toName') ?? '').slice(0, 120);
+    return Number.isFinite(lat) && Number.isFinite(lon) && lat > 48 && lat < 51.2 && lon > 12 && lon < 19 && name ? { lat, lon, label: name } : null;
+  })();
+  const [to, setTo] = useState<Pt | null>(pre);
   const [fromLabel, setFromLabel] = useState('');
-  const [toLabel, setToLabel] = useState('');
+  const [toLabel, setToLabel] = useState(pre?.label ?? '');
   const [arriveBy, setArriveBy] = useState(false);
   const [when, setWhen] = useState(() => localInputValue(Date.now()));
   const [wheelchair, setWheelchair] = useState(false);

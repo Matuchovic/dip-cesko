@@ -364,6 +364,8 @@ export class MapController {
     if (!this.ready || this.destroyed) return;
     const now = Date.now();
     const z = this.map.getZoom();
+    // dobíhající pulzy i u vozidel mimo výřez – jinak by smyčka nikdy neusnula (baterie)
+    for (const [pid, pt] of this.pulses) if (now - pt > 1400) this.pulses.delete(pid);
     const animating = this.follower.animator.isAnimating(now) || this.follower.isMoving(now) || this.pulses.size > 0 || this.route?.hasData === true;
     if (this.route?.hasData && now - this.route.lastStep > 70 && this.map.getLayer('dop-route-flow')) {
       this.route.step = (this.route.step + 1) % DASH_STEPS.length; this.route.lastStep = now;

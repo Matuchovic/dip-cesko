@@ -29,7 +29,7 @@ const NAV: { href: string; label: MessageKey; Icon: typeof IconMap }[] = [
   { href: '/jizdenky', label: 'nav_tickets', Icon: IconTicket },
 ];
 
-const PEEK = 196;
+const PEEK = 392; // náhled ukáže nejbližší zastávku a tři odjezdy
 
 export default function AppShell({ children, styleUrl, demo }: { children: ReactNode; styleUrl: string; demo: boolean }) {
   const pathname = usePathname();
@@ -95,7 +95,7 @@ export default function AppShell({ children, styleUrl, demo }: { children: React
   const panelContent = sheetMode && selected ? <VehicleDetail /> : sheetMode && stop ? <StopCard /> : children;
 
   return (
-    <div className="app" style={{ '--sheet-h': `${sheetH}px`, '--sheet-peek': `${sheetMode ? Math.min(sheetH, 260) : 0}px` } as React.CSSProperties}>
+    <div className="app" style={{ '--sheet-h': `${sheetH}px`, '--sheet-peek': `${sheetMode ? Math.min(sheetH, PEEK) : 0}px` } as React.CSSProperties}>
       <a className="skip-link" href="#main">{t('skip')}</a>
       <header className="topbar">
         <Link href="/" className="brand" aria-label={t('brandAria')}>

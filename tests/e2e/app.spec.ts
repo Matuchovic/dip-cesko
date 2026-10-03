@@ -100,7 +100,7 @@ test('spojení: validace a stav nepřipojeného plánovače', async ({ page }) =
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/spojeni');
   await page.getByRole('button', { name: 'Vyhledat spojení' }).click();
-  await expect(page.getByText('Vyberte výchozí místo i cíl ze seznamu.')).toBeVisible();
+  await expect(page.getByText('Vyber výchozí místo i cíl ze seznamu.')).toBeVisible();
   await page.getByRole('combobox', { name: 'Odkud' }).fill('andel');
   await page.getByRole('option', { name: /Anděl/ }).click();
   await page.getByRole('combobox', { name: 'Kam' }).fill('mustek');

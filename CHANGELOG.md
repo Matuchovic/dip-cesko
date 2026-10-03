@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.0 – 2026-10-03
+- Nová domovská obrazovka s jasnou hierarchií: nejbližší zastávka velkým písmem, tři nejbližší odjezdy (linka, cíl, nástupiště, zpoždění, velký odpočet) a u prvního rada lidskou řečí: „Stihneš to · rezerva 2 min“, „Vyraz hned“, „Nestihneš · další za 7 min“ (podle chůze k zastávce).
+- Tvoje místa: Domů a Do práce (uložené jen v zařízení) s časem odjezdu a příjezdu z plánovače; klepnutí otevře Spojení s předvyplněným cílem; pod nimi oblíbené zastávky.
+- V okolí: další dvě zastávky s nejbližšími linkami; Provoz: mimořádnosti; odkaz na schéma metra.
+- Panel s prostorovými okraji (světlá hrana, vrstvený stín, na mobilu podložená vrstva), výrazné nadpisy (název zastávky 32 px, sekce 24 px), čísla s pevnou šířkou.
+- Čeština jednotně tykáním („Kam jedeš?“, „Vyhledej zastávku“, „teď“).
+- Na mobilu je panel při otevření vyšší, aby byla vidět zastávka se všemi třemi odjezdy; metro A, B, C v barvách linek; neznámé zpoždění se nevypisuje.
+- Oprava: pulzy u vozidel mimo výřez nikdy nevypršely a mapa se kvůli nim neuspala (zbytečné vybíjení baterie).
+
 ## 0.7.0 – 2026-10-03
 - Nové značky vozidel místo teček (od přiblížení 12,5): pilulka s číslem linky, kroužek zpoždění (zelená včas, oranžová do 3 min, červená víc, šedá bez údaje) a klín směru jízdy.
 - Pulz při každé skutečně nové poloze vozu; stopa za vozidlem (od přiblížení 14,6) ze skutečného pohybu za poslední ~3 s.
