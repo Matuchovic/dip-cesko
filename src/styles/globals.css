@@ -854,3 +854,6 @@ body:has(.ticker) { --ticker-h: 36px; }
 
 .a-scard.s0, .a-scard.s1 { opacity: .9; }
 @media (max-width: 899px) { .a-sights { transform: scale(.84); } }
+
+/* Průvodce dostane fokus kvůli klávesnici – ale bez obecného rámečku fokusu (dělal modré zaoblené rohy). */
+.onb:focus, .onb:focus-visible { outline: none !important; box-shadow: none !important; border-radius: 0 !important; }

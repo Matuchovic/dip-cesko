@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.15.1 – 2026-10-03
+- Průvodce opravdu přes celou obrazovku: obecný rámeček fokusu mu přidával zaoblené rohy s modrým okrajem (dole byly vidět modré rohy).
+
 ## 0.15.0 – 2026-10-03
 - Nový úvodní průvodce: 10 kroků, každý jedna funkce – jazyk, živá mapa (barvy zpoždění), odjezdy a rady, zvonek a připomínky (s přehráním zvonku), spojení, památky, pruh novinek, ovládání panelu a aktualizace, nastavení na 3 klepnutí (plocha, upozornění, poloha), Domů a Do práce. Animace přesně ukazují, kam klepnout (pulzující kroužek), plynulé 3D přechody, konfety z čísel linek. Mobil: celá obrazovka, listování přejetím prstem. Počítač: dvousloupcové okno, šipky ← → a Esc. Klepnutím na proužek nahoře skočíš na libovolný krok.
 - Rychlost: 3D knihovna (three.js) se stahuje až po prvním vykreslení mapy jako samostatný balík; průvodce se stahuje, jen když se má ukázat; během tažení mapou se štítky vozidel obnovují méně často (plynulejší pohyb); obrázky loga a ikon ve WebP (průvodce dřív stahoval 475 kB PNG); dlouhé seznamy karet se vykreslují až při posunu k nim; na telefonech levnější efekty karet.

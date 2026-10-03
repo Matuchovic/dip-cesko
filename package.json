@@ -1,6 +1,6 @@
 {
   "name": "doprava-cesko",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "private": true,
   "description": "Doprava — Celé Česko: prémiová dopravní webová aplikace (Next.js + MapLibre). První integrace: PID.",
   "engines": {
