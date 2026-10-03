@@ -5,7 +5,8 @@ import { MODES, type Mode, type StopPoint, type VehicleState } from '@/domain/mo
 import { MODE_COLOR } from '@/domain/modes';
 import { metersPerPixel } from '@/domain/geo';
 import { manifest, mapAssetFor, spriteSizeStops, type VehicleAsset } from './assets';
-import { badgeImage, clusterImage, stopLabelImage } from './images';
+import { badgeImage, clusterImage, donutImage, etaImage, headingImage, pillImage, stopLabelImage } from './images';
+import { describeDelay } from '@/domain/delay';
 import { TrackFollower } from './follower';
 import { TrackNetwork, type TrackKind } from './tracks';
 import { buildExtrusions, buildPieces, DEFAULT_SHAPES, type VehicleShape } from './vehicle3d';
@@ -27,7 +28,9 @@ export interface MapEvents {
   onRender(ok: boolean): void;
 }
 
-const LIVE = 'dop-live', PIECES = 'dop-pieces', V3D = 'dop-3d', OV = 'dop-overview', STOPS = 'dop-stops', ME = 'dop-me';
+const LIVE = 'dop-live', PIECES = 'dop-pieces', V3D = 'dop-3d', OV = 'dop-overview', STOPS = 'dop-stops', ME = 'dop-me', PULSE = 'dop-pulse', TRAIL = 'dop-trail', ROUTE = 'dop-route', ROUTE_STOPS = 'dop-route-stops';
+const CLUSTER_MODES: Mode[] = ['tram', 'bus', 'metro', 'trolleybus', 'train', 'ferry', 'funicular', 'other'];
+const DASH_STEPS: number[][] = [[0, 4, 3], [0.5, 4, 2.5], [1, 4, 2], [1.5, 4, 1.5], [2, 4, 1], [2.5, 4, 0.5], [3, 4, 0], [0, 0.5, 3, 3.5], [0, 1, 3, 3], [0, 1.5, 3, 2.5], [0, 2, 3, 2], [0, 2.5, 3, 1.5], [0, 3, 3, 1], [0, 3.5, 3, 0.5]];
 const SPRITE_ZOOM = 15.5, LIVE_ZOOM = 12.5, MODEL_ZOOM = 15, PITCH_3D = 20, DETAIL_3D_MAX = 90;
 const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
 export const FALLBACK_STYLE_URL = '/map/offline-style.json';
@@ -58,6 +61,11 @@ export class MapController {
   private raf = 0;
   private lastPush = 0;
   private lastLiveData = 0;
+  private pulsesShown = false;
+  private lastMeasured = new Map<string, string | null>();
+  private pulses = new Map<string, number>();
+  private history = new Map<string, { t: number; lng: number; lat: number }[]>();
+  private route: { id: string; timer: ReturnType<typeof setInterval> | null; step: number; lastStep: number; hasData: boolean } | null = null;
   private warnedFrame = false;
   private liveDirty = true;
   private last3d = 0;
@@ -158,8 +166,9 @@ export class MapController {
 
   private addLayers() {
     const m = this.map;
-    for (const [id, cluster] of [[STOPS, false], [OV, true], [LIVE, false], [PIECES, false], [V3D, false], [ME, false]] as const) {
-      if (!m.getSource(id)) m.addSource(id, cluster ? { type: 'geojson', data: EMPTY, cluster: true, clusterMaxZoom: 12, clusterRadius: 46 } : { type: 'geojson', data: EMPTY });
+    for (const [id, cluster] of [[STOPS, false], [OV, true], [LIVE, false], [PIECES, false], [V3D, false], [ME, false], [PULSE, false], [TRAIL, false], [ROUTE, false], [ROUTE_STOPS, false]] as const) {
+      if (!m.getSource(id)) m.addSource(id, cluster ? { type: 'geojson', data: EMPTY, cluster: true, clusterMaxZoom: 12, clusterRadius: 52,
+        clusterProperties: Object.fromEntries(CLUSTER_MODES.map((md) => [md, ['+', ['case', ['==', ['get', 'mode'], md], 1, 0]]])) } : { type: 'geojson', data: EMPTY });
     }
     const layers: LayerSpecification[] = [
       { id: 'dop-stops-dot', type: 'circle', source: STOPS, minzoom: 14.5, layout: { visibility: this.settings.showStops ? 'visible' : 'none' },
@@ -169,11 +178,21 @@ export class MapController {
       { id: 'dop-me', type: 'circle', source: ME, paint: { 'circle-radius': 7, 'circle-color': '#2F7BFF', 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 3 } },
       { id: 'dop-ov-dot', type: 'circle', source: OV, maxzoom: LIVE_ZOOM, filter: ['!', ['has', 'point_count']],
         paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 2.5, 12.5, 5], 'circle-color': modeColor, 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 1.2, 'circle-opacity': freshOpacity, 'circle-stroke-opacity': freshOpacity } },
-      { id: 'dop-ov-cluster', type: 'symbol', source: OV, maxzoom: LIVE_ZOOM, filter: ['has', 'point_count'], layout: { 'icon-image': ['concat', 'c|', ['to-string', ['get', 'point_count']]], 'icon-allow-overlap': true } },
+      { id: 'dop-ov-cluster', type: 'symbol', source: OV, maxzoom: LIVE_ZOOM, filter: ['has', 'point_count'], layout: { 'icon-image': ['concat', 'd', ...CLUSTER_MODES.flatMap((md) => ['|', ['to-string', ['get', md]]])] as unknown as ExpressionSpecification, 'icon-allow-overlap': true } },
       { id: 'dop-halo', type: 'circle', source: LIVE, minzoom: LIVE_ZOOM, filter: ['==', ['get', 'id'], ''],
         paint: { 'circle-radius': ['interpolate', ['exponential', 2], ['zoom'], 12.5, 14, 16, 26, 19, 110, 21, 380], 'circle-color': '#2F6FB5', 'circle-opacity': 0.14, 'circle-stroke-color': '#2F6FB5', 'circle-stroke-width': 2, 'circle-stroke-opacity': 0.55, 'circle-pitch-alignment': 'map' } },
-      { id: 'dop-dot', type: 'circle', source: LIVE, minzoom: LIVE_ZOOM, maxzoom: SPRITE_ZOOM,
-        paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 12.5, 5, 15.5, 7.5], 'circle-color': modeColor, 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 1.6, 'circle-opacity': freshOpacity, 'circle-stroke-opacity': freshOpacity } },
+      { id: ROUTE, type: 'line', source: ROUTE, layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 5, 17, 10], 'line-opacity': 0.28 } },
+      { id: 'dop-route-flow', type: 'line', source: ROUTE, layout: { 'line-cap': 'butt', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 2.5, 17, 4], 'line-opacity': 0.9, 'line-dasharray': [0, 4, 3] } },
+      { id: 'dop-trail', type: 'line', source: TRAIL, minzoom: 14.6, layout: { 'line-cap': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-opacity': ['get', 'a'], 'line-width': ['get', 'w'] } },
+      { id: 'dop-pulse', type: 'circle', source: PULSE, minzoom: LIVE_ZOOM, paint: { 'circle-radius': ['get', 'r'], 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': ['get', 'color'], 'circle-stroke-width': ['get', 'sw'], 'circle-stroke-opacity': ['get', 'a'], 'circle-pitch-alignment': 'map' } },
+      { id: 'dop-dir', type: 'symbol', source: LIVE, minzoom: LIVE_ZOOM, maxzoom: SPRITE_ZOOM, filter: ['has', 'brg'],
+        layout: { 'icon-image': ['concat', 'h|', ['get', 'mode']], 'icon-size': ['interpolate', ['linear'], ['zoom'], 12.5, 0.7, 15.5, 0.9], 'icon-rotate': ['get', 'brg'], 'icon-rotation-alignment': 'map', 'icon-pitch-alignment': 'map', 'icon-allow-overlap': true, 'icon-ignore-placement': true },
+        paint: { 'icon-opacity': freshOpacity } },
+      { id: 'dop-dot', type: 'symbol', source: LIVE, minzoom: LIVE_ZOOM, maxzoom: SPRITE_ZOOM,
+        layout: { 'icon-image': ['get', 'pill'], 'icon-size': ['interpolate', ['linear'], ['zoom'], 12.5, 0.72, 14, 0.9, 15.5, 1], 'icon-allow-overlap': true, 'icon-ignore-placement': true,
+          'icon-rotation-alignment': 'viewport', 'icon-pitch-alignment': 'viewport', 'symbol-sort-key': ['get', 'sort'] },
+        paint: { 'icon-opacity': freshOpacity } },
+      { id: ROUTE_STOPS, type: 'symbol', source: ROUTE_STOPS, minzoom: 13.5, layout: { 'icon-image': ['get', 'chip'], 'icon-size': 1, 'icon-anchor': 'left', 'icon-offset': [14, 0], 'icon-allow-overlap': true, 'icon-ignore-placement': true } },
       { id: 'dop-marker', type: 'circle', source: LIVE, minzoom: SPRITE_ZOOM, filter: ['==', ['get', 'sprite'], false],
         paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 15.5, 8, 19, 12], 'circle-color': modeColor, 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 2.5, 'circle-opacity': freshOpacity, 'circle-pitch-alignment': 'map' } },
       { id: 'dop-pieces', type: 'symbol', source: PIECES, minzoom: SPRITE_ZOOM,
@@ -182,7 +201,7 @@ export class MapController {
         paint: { 'icon-opacity': freshOpacity } },
       { id: 'dop-3d', type: 'fill-extrusion', source: V3D, minzoom: MODEL_ZOOM, layout: { visibility: 'none' },
         paint: { 'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 1, 'fill-extrusion-vertical-gradient': true } },
-      { id: 'dop-badge', type: 'symbol', source: LIVE, minzoom: 13.5,
+      { id: 'dop-badge', type: 'symbol', source: LIVE, minzoom: SPRITE_ZOOM,
         layout: { 'icon-image': ['get', 'badge'], 'icon-anchor': 'bottom', 'icon-offset': ['get', 'off'], 'icon-allow-overlap': true, 'icon-ignore-placement': true,
           'icon-rotation-alignment': 'viewport', 'icon-pitch-alignment': 'viewport', 'symbol-sort-key': ['get', 'sort'] } },
     ];
@@ -195,6 +214,10 @@ export class MapController {
     try {
       const [kind, a, b, c] = id.split('|');
       if (kind === 'b' && a && b !== undefined) this.map.addImage(id, badgeImage(b, a as Mode, (c as 'live' | 'stale' | 'selected') ?? 'live'), { pixelRatio: 2 });
+      else if (kind === 'p' && a && b !== undefined) { const [, , , tone, st] = id.split('|'); this.map.addImage(id, pillImage(b, a as Mode, tone ?? 'unknown', (st as 'live' | 'stale' | 'selected') ?? 'live'), { pixelRatio: 2 }); }
+      else if (kind === 'h' && a) this.map.addImage(id, headingImage(a as Mode), { pixelRatio: 1 });
+      else if (kind === 'd') { const parts = id.split('|').slice(1).map(Number); this.map.addImage(id, donutImage(Object.fromEntries(CLUSTER_MODES.map((md, i) => [md, parts[i] ?? 0]))), { pixelRatio: 2 }); }
+      else if (kind === 'e' && a) { const [, name, eta, color] = id.split('|'); this.map.addImage(id, etaImage(name ?? '', eta ?? '', color ?? '#2F6FB5'), { pixelRatio: 2 }); }
       else if (kind === 'c' && a) this.map.addImage(id, clusterImage(Number(a)), { pixelRatio: 2 });
       else if (kind === 's' && a) this.map.addImage(id, stopLabelImage(a, b || null), { pixelRatio: 2 });
     } catch { /* obrázek se nepodařilo vytvořit – vrstva zůstane bez štítku */ }
@@ -301,6 +324,13 @@ export class MapController {
   /** Nová dávka dat ze serveru: oddělená od animace, React se nepřekresluje. */
   ingest(list: VehicleState[], receivedAt: number) {
     this.vehicles = new Map(list.map((v) => [v.id, v])); this.liveDirty = true;
+    const nowP = Date.now();
+    for (const v of list) {
+      const prev = this.lastMeasured.get(v.id);
+      if (prev !== undefined && prev !== v.measuredAt) this.pulses.set(v.id, nowP);
+      this.lastMeasured.set(v.id, v.measuredAt);
+    }
+    if (this.lastMeasured.size > list.length * 2 + 200) { const keep = new Set<string>(list.map((v) => v.id)); for (const k of [...this.lastMeasured.keys()]) if (!keep.has(k)) { this.lastMeasured.delete(k); this.history.delete(k); } }
     this.follower.update(list, receivedAt, Date.now(), this.getNet);
     if (this.selectedId && !this.vehicles.has(this.selectedId)) { this.selectedId = null; this.applySelectionFilter(); this.setFollow(false); this.events.onSelect(null, 'expired'); }
     this.pushOverview();
@@ -334,7 +364,11 @@ export class MapController {
     if (!this.ready || this.destroyed) return;
     const now = Date.now();
     const z = this.map.getZoom();
-    const animating = this.follower.animator.isAnimating(now) || this.follower.isMoving(now);
+    const animating = this.follower.animator.isAnimating(now) || this.follower.isMoving(now) || this.pulses.size > 0 || this.route?.hasData === true;
+    if (this.route?.hasData && now - this.route.lastStep > 70 && this.map.getLayer('dop-route-flow')) {
+      this.route.step = (this.route.step + 1) % DASH_STEPS.length; this.route.lastStep = now;
+      this.map.setPaintProperty('dop-route-flow', 'line-dasharray', DASH_STEPS[this.route.step]);
+    }
     const minGap = this.settings.reducedMotion ? 1000 : 33;
     if (z >= LIVE_ZOOM - 0.3 && now - this.lastPush >= minGap) { this.pushLive(now); this.lastPush = now; }
     const following = this.follow && this.selectedId ? this.followStep(now) : false;
@@ -351,6 +385,7 @@ export class MapController {
     const style = this.settings.vehicleStyle;
     const want3d = style === 'sprites' && this.pitchedMode && zoom >= MODEL_ZOOM && now - this.last3d >= (this.settings.reducedMotion ? 1000 : 90);
     const models: ModelVehicle[] = [];
+    const trails: Feature[] = [], pulses: Feature[] = [];
     const arts: ArticulatedVehicle[] = [];
     const center = this.map.getCenter();
     const live: Feature[] = [], pieces: Feature[] = [], solids: Feature[] = [];
@@ -396,15 +431,35 @@ export class MapController {
         off = (Math.abs(Math.cos(th)) * lenPx * pitchK + Math.abs(Math.sin(th)) * widPx) / 2 + 7 + (model || this.pitchedMode ? ((H / mpp) * f) * Math.sin(pitch * D2R) : 0);
         off = Math.min(off, 320);
       }
+      const hist = this.history.get(id) ?? [];
+      const lastH = hist[hist.length - 1];
+      if (!lastH || (now - lastH.t > 110 && (Math.abs(lastH.lng - mid.lng) + Math.abs(lastH.lat - mid.lat)) > 4e-6)) { hist.push({ t: now, lng: mid.lng, lat: mid.lat }); while (hist.length > 26 || (hist[0] && now - hist[0].t > 3200)) hist.shift(); this.history.set(id, hist); }
+      if (zoom >= 14.6 && hist.length > 2 && !this.settings.reducedMotion) for (let i = 1; i < hist.length; i++) {
+        const k = i / hist.length;
+        trails.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: [[hist[i - 1]!.lng, hist[i - 1]!.lat], [hist[i]!.lng, hist[i]!.lat]] }, properties: { color: MODE_COLOR[v.route.mode], a: Math.round(k * 55) / 100 * (stale ? 0.4 : 1), w: 1 + k * 5 } });
+      }
+      const pt = this.pulses.get(id);
+      if (pt !== undefined && !this.settings.reducedMotion) {
+        const k = (now - pt) / 1400;
+        if (k >= 1) this.pulses.delete(id);
+        else pulses.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [mid.lng, mid.lat] }, properties: { r: 9 + k * 26, a: Math.round((1 - k) * 60) / 100, sw: 2.5 * (1 - k) + 0.5, color: MODE_COLOR[v.route.mode] } });
+      }
       live.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [mid.lng, mid.lat] }, properties: {
         id, mode: v.route.mode, sprite: sprite || model, has3d: style === 'sprites' && HAS_3D.has(v.route.mode) && hasBody, fresh: stale ? 'stale' : 'live',
         badge: `b|${v.route.mode}|${safe(v.route.shortName)}|${state}`, sort: sel ? 1000 : stale ? 1 : 10, off: [0, -Math.round(off)],
+        pill: `p|${v.route.mode}|${safe(v.route.shortName)}|${stale ? 'unknown' : describeDelay(v.delay).tone === 'late' && v.delay.kind === 'known' && v.delay.seconds < 180 ? 'warn' : describeDelay(v.delay).tone}|${state}`,
+        ...(s.bearing !== null ? { brg: Math.round(s.bearing) } : {}),
       } });
       if (sprite && asset && !this.pitchedMode && zoom >= SPRITE_ZOOM) pieces.push(...buildPieces(s.body, shape, asset.id, { fresh: stale ? 'stale' : 'live', sort: sel ? 1000 : 10 }));
       if (want3d && hasBody && HAS_3D.has(v.route.mode)) solids.push(...buildExtrusions(s.body, shape));
     } catch (e) { if (!this.warnedFrame) { this.warnedFrame = true; console.warn('Vozidlo nelze vykreslit', id, e); } } });
     // štítky a body: nejvýš 10× za sekundu (3D modely se posouvají v každém snímku) – méně práce pro mapu
-    if (now - this.lastLiveData >= 100 || this.liveDirty) { (this.map.getSource(LIVE) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: live }); this.lastLiveData = now; this.liveDirty = false; }
+    if (now - this.lastLiveData >= 100 || this.liveDirty) {
+      (this.map.getSource(LIVE) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: live });
+      (this.map.getSource(TRAIL) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: trails });
+      this.lastLiveData = now; this.liveDirty = false;
+    }
+    if (pulses.length || this.pulsesShown) { (this.map.getSource(PULSE) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: pulses }); this.pulsesShown = pulses.length > 0; }
     this.modelLayer.setVehicles(style === 'models' ? models : []);
     this.artLayer.setVehicles(style === 'models' ? arts : []);
     if (!this.pitchedMode || zoom < SPRITE_ZOOM) (this.map.getSource(PIECES) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: pieces });
@@ -460,7 +515,45 @@ export class MapController {
     if (this.map.getLayer('dop-halo')) this.map.setFilter('dop-halo', ['==', ['get', 'id'], this.selectedId ?? ''] as FilterSpecification);
   }
 
+  /** Trasa vybraného vozu s tekoucí čárou a odpočty do dalších zastávek (z průběhu spoje, obnova po 30 s). */
+  private async loadRoute(id: string) {
+    try {
+      const res = await fetch(`/api/trip?vehicle=${encodeURIComponent(id)}`);
+      const body = res.ok ? (await res.json()) as { data: { mode: Mode; lastStopSeq: number | null; delay: { kind: string; seconds?: number }; stops: { seq: number; name: string; lat: number; lon: number; arrival: string | null; arrivalRt: string | null }[]; shape: [number, number][] } | null } : null;
+      if (!this.route || this.route.id !== id || !body?.data) return;
+      const d = body.data, color = MODE_COLOR[d.mode];
+      const coords = d.shape.length >= 2 ? d.shape : d.stops.map((st) => [st.lon, st.lat] as [number, number]);
+      (this.map.getSource(ROUTE) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: { color } }] });
+      const now = Date.now(), delay = d.delay.kind === 'known' ? (d.delay.seconds ?? 0) * 1000 : 0;
+      const when = (raw: string | null, rt: boolean): number | null => {
+        if (!raw) return null;
+        if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(raw)) { const [h, m, sec] = raw.split(':').map(Number); const t = new Date(); t.setHours(h ?? 0, m ?? 0, sec ?? 0, 0); return t.getTime() + (rt ? 0 : delay); }
+        const t = Date.parse(raw); return Number.isFinite(t) ? t + (rt ? 0 : delay) : null;
+      };
+      const chips = d.stops.filter((st) => d.lastStopSeq === null || st.seq > d.lastStopSeq).slice(0, 8).flatMap((st) => {
+        const t = when(st.arrivalRt, true) ?? when(st.arrival, false);
+        if (t === null) return [];
+        const min = Math.round((t - now) / 60_000);
+        const eta = min <= 0 ? '< 1 min' : `${min} min`;
+        return [{ type: 'Feature' as const, geometry: { type: 'Point' as const, coordinates: [st.lon, st.lat] }, properties: { chip: `e|${st.name.replace(/\|/g, '/')}|${eta}|${color}` } }];
+      });
+      (this.map.getSource(ROUTE_STOPS) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: chips });
+      this.route.hasData = true;
+      this.kick();
+    } catch { /* průběh spoje je doplněk – bez něj výběr funguje dál */ }
+  }
+
+  private clearRoute() {
+    if (this.route?.timer) clearInterval(this.route.timer);
+    this.route = null;
+    for (const src of [ROUTE, ROUTE_STOPS]) (this.map.getSource(src) as GeoJSONSource | undefined)?.setData(EMPTY);
+  }
+
   select(id: string | null, opts: { fly?: boolean; follow?: boolean } = {}) {
+    if (this.route?.id !== id) {
+      this.clearRoute();
+      if (id && this.ready) { this.route = { id, timer: setInterval(() => void this.loadRoute(id), 30_000), step: 0, lastStep: 0, hasData: false }; void this.loadRoute(id); }
+    }
     this.selectedId = id;
     this.liveDirty = true;
     this.applySelectionFilter();
@@ -673,6 +766,7 @@ export class MapController {
 
   destroy() {
     this.destroyed = true;
+    if (this.route?.timer) clearInterval(this.route.timer);
     if (this.raf) cancelAnimationFrame(this.raf);
     if (this.stopsTimer) clearTimeout(this.stopsTimer);
     if (this.loadTimer) clearTimeout(this.loadTimer);

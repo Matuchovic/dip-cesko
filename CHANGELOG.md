@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.0 – 2026-10-03
+- Nové značky vozidel místo teček (od přiblížení 12,5): pilulka s číslem linky, kroužek zpoždění (zelená včas, oranžová do 3 min, červená víc, šedá bez údaje) a klín směru jízdy.
+- Pulz při každé skutečně nové poloze vozu; stopa za vozidlem (od přiblížení 14,6) ze skutečného pohybu za poslední ~3 s.
+- Při oddálení shluky jako prstenec rozdělený podle druhu dopravy s počtem vozidel.
+- Vybraný vůz: trasa spoje s tekoucí čárou ve směru jízdy a štítky dalších zastávek s odpočtem (z průběhu spoje Golemio, obnova 30 s).
+- S omezenými animacemi se pulzy a stopy nekreslí.
+
 ## 0.6.0 – 2026-10-03
 - Živé schéma metra (/metro): stylizované linky A, B, C pro mobil, všech 61 stanic, přestupy, soupravy podle skutečných poloh (obnova 5 s, plynulý pohyb), klepnutí na stanici = odjezdy, na soupravu = mapa se sledováním.
 - Schéma linky (/linka): zastávky obou směrů pod sebou a všechny vozy linky v reálném čase; směr vozu podle souhlasu kurzu se směrem trasy; barva rámečku = zpoždění. Otevře se z detailu vozidla i klepnutím na číslo linky v odjezdech.

@@ -54,7 +54,8 @@ test('3D karoserie: vykreslení a výběr mimo střed ve třech natočeních map
   });
   await page.getByRole('button', { name: 'Sledovat ve 3D' }).click();
   await expect.poll(() => page.evaluate(() => (window as unknown as W).__doprava!.map.getZoom())).toBeGreaterThan(17.5);
-  await expect.poll(() => page.evaluate(() => (window as unknown as W).__doprava!.controller.raf)).toBe(0);
+  // smyčka usne, jakmile doběhne případný pulz nových dat (max. 1,4 s po každém obnovení)
+  await expect.poll(() => page.evaluate(() => (window as unknown as W).__doprava!.controller.raf), { timeout: 15_000, intervals: [250] }).toBe(0);
   expect(errors).toEqual([]);
 });
 
